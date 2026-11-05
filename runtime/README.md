@@ -41,7 +41,7 @@ The runtime is everything that runs *inside* a bottle: Wine plus the DirectX tra
 
 ## Status
 
-The scripts in `scripts/` are **stubs**: each documents its intended steps and exits non-zero. Turning them into a reproducible build (ideally in CI, published to GitHub Releases with checksums) is the top roadmap item. Contributions welcome.
+`scripts/build-wine.sh` is implemented (`--prepare-only` fetches and patches without building). The other scripts in `scripts/` are still **stubs**: each documents its intended steps and exits non-zero. Turning them into a reproducible build (ideally in CI, published to GitHub Releases with checksums) is the top roadmap item. Contributions welcome.
 
 ## Wine: upstream plus a patch queue
 

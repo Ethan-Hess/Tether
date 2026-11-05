@@ -29,4 +29,4 @@ runtime/scripts/package-runtime.sh # assemble Runtimes/<version>/ + runtime.json
 runtime/scripts/import-gptk.sh     # optional: import D3DMetal from your own GPTK download
 ```
 
-The build scripts are currently **stubs** that document their steps and exit. Making them real is the top roadmap item.
+`build-wine.sh` is implemented and needs x86_64 Homebrew in `/usr/local` (`arch -x86_64 /usr/local/bin/brew install bison flex pkg-config freetype gnutls sdl2 gstreamer molten-vk mingw-w64`). The other runtime scripts are still **stubs** that document their steps and exit. Making them real is the top roadmap item.
