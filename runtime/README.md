@@ -43,7 +43,15 @@ The runtime is everything that runs *inside* a bottle: Wine plus the DirectX tra
 
 The scripts in `scripts/` are **stubs**: each documents its intended steps and exits non-zero. Turning them into a reproducible build (ideally in CI, published to GitHub Releases with checksums) is the top roadmap item. Contributions welcome.
 
+## Wine: upstream plus a patch queue
+
+Tether doesn't fork Wine (see [ADR 0004](../docs/adr/0004-upstream-wine-with-patch-queue.md)). The build is:
+
+1. **Upstream Wine at a pinned stable tag.** Nightly CI also builds against Wine's development branch.
+2. **Mac-only configuration:** `--enable-archs=i386,x86_64 --without-x --without-wayland --disable-tests`, with Linux audio and video backends off.
+3. **The patch queue** in [`patches/wine/`](patches/wine/), applied in `series` order. Each patch records its origin (CrossOver, Proton, staging, or Tether) and its upstream status. The format and the rebase procedure are in [`patches/wine/README.md`](patches/wine/README.md).
+
 ## Rules
 
 - Never commit built binaries. `runtime/build`, `runtime/src`, and `runtime/dist` are gitignored.
-- Patches in `patches/wine/` must be upstreamable in spirit: compatibility and performance fixes only, never anything that hides Wine or alters what games can observe about the system (see `docs/ANTICHEAT.md`).
+- Patches are compatibility, performance, and macOS-integration fixes only. Never anything that hides Wine or alters what games can observe about the system (see `docs/ANTICHEAT.md`).

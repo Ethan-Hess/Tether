@@ -21,7 +21,7 @@ Use `TETHER_HOME=$(mktemp -d)` when experimenting so you don't touch your real b
 | UI | `Sources/TetherApp` (keep logic in TetherKit) |
 | Game profile | `Sources/TetherKit/Resources/Profiles/<id>.json` |
 | New graphics backend | `Sources/TetherKit/Graphics/Backends.swift` + `runtime/scripts/build-<id>.sh` + add to `GraphicsBackends.all` |
-| Wine patches | `runtime/patches/wine/NNNN-description.patch` |
+| Wine patches | `runtime/patches/wine/NNNN-description.patch` + entry in `series` (header format: `runtime/patches/wine/README.md`) |
 | Design decisions | `docs/adr/NNNN-title.md` |
 
 ## Adding a game profile

@@ -93,15 +93,16 @@ Short version: Tether makes no attempt to evade anti-cheat, and its architecture
 
 ## Roadmap
 
-- [x] Bottle management, game profiles, launch-environment planning (TetherKit)
-- [x] `tether` CLI and SwiftUI app skeleton
-- [x] Override and environment policy enforcement, with tests
-- [ ] Reproducible runtime build: Wine + msync patches, DXMT, DXVK, MoltenVK ([runtime/](runtime/))
-- [ ] Runtime download and update from GitHub Releases, with signature verification
-- [ ] App: run executable, installers, shortcuts, per-game launch buttons
-- [ ] GPTK import flow in the app
-- [ ] Shader cache pre-warming, Rosetta AOT warm-up
-- [ ] Signed and notarized `.app` builds
+The full plan, with 1.0 exit criteria and risks, is in **[ROADMAP.md](ROADMAP.md)**.
+
+- [x] **M0 Foundations:** TetherKit, CLI, app skeleton, launch policy
+- [ ] **M1 First light:** reproducible Wine + DXMT/DXVK runtime, built in CI
+- [ ] **M2 Launchers:** Steam and Battle.net end to end
+- [ ] **M3 Graphics coverage:** D3D9 through D3D12, Vulkan, OpenGL
+- [ ] **M4 Performance:** `tether bench`, msync, shader caches, input latency
+- [ ] **M5 Product UX:** library, one-click launcher setup, shortcuts
+- [ ] **M6 Distribution:** signing, notarization, auto-updates
+- [ ] **M7 1.0:** compatibility database, 50+ Gold titles
 
 ## Contributing
 
