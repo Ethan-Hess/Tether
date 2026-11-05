@@ -1,0 +1,17 @@
+.DS_Store
+/.build
+/build
+/Packages
+xcuserdata/
+DerivedData/
+.swiftpm/
+*.xcodeproj
+Package.resolved.bak
+
+# Runtime build artifacts (never commit Wine/DXMT/DXVK/MoltenVK/GPTK binaries)
+/runtime/build/
+/runtime/src/
+/runtime/dist/
+*.tar.xz
+*.tar.gz
+*.dmg

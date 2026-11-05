@@ -1,0 +1,11 @@
+{
+  "id": "overwatch",
+  "name": "Overwatch 2",
+  "executables": ["Overwatch.exe"],
+  "backendPreference": ["dxmt", "d3dmetal", "dxvk"],
+  "sync": "msync",
+  "windowsVersion": "win10",
+  "environment": {},
+  "dllOverrides": [],
+  "notes": "Install and launch through Battle.net in its own bottle. Runs D3D11 by default; DXMT is the preferred low-overhead path. Tether does not modify game files or inject anything into the process. See docs/ANTICHEAT.md."
+}

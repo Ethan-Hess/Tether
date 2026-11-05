@@ -1,0 +1,11 @@
+{
+  "id": "battlenet",
+  "name": "Battle.net",
+  "executables": ["Battle.net.exe", "Battle.net Launcher.exe", "Battle.net-Setup.exe"],
+  "backendPreference": ["dxmt", "dxvk"],
+  "sync": "msync",
+  "windowsVersion": "win10",
+  "environment": {},
+  "dllOverrides": [],
+  "notes": "Chromium-based launcher. If the window renders blank, try the dxvk backend. TODO: document known-good runtime versions."
+}
