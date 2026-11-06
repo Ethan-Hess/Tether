@@ -10,6 +10,9 @@ public struct GameProfile: Codable, Hashable, Sendable, Identifiable {
     public var executables: [String]
     /// Steam app IDs this profile applies to (matched before executable names).
     public var steamAppIDs: [Int]
+    /// Command-line arguments passed to the executable on every launch, before any the user adds
+    /// (e.g. `-cef-disable-gpu` for Steam). Plain arguments to the game; never run through a shell.
+    public var launchArguments: [String]
     /// Backends to try in order. Unavailable ones are skipped.
     public var backendPreference: [GraphicsBackendID]
     public var sync: SyncMode?
@@ -24,6 +27,7 @@ public struct GameProfile: Codable, Hashable, Sendable, Identifiable {
         name: String,
         executables: [String] = [],
         steamAppIDs: [Int] = [],
+        launchArguments: [String] = [],
         backendPreference: [GraphicsBackendID] = [],
         sync: SyncMode? = nil,
         windowsVersion: WindowsVersion? = nil,
@@ -35,6 +39,7 @@ public struct GameProfile: Codable, Hashable, Sendable, Identifiable {
         self.name = name
         self.executables = executables
         self.steamAppIDs = steamAppIDs
+        self.launchArguments = launchArguments
         self.backendPreference = backendPreference
         self.sync = sync
         self.windowsVersion = windowsVersion
@@ -49,6 +54,7 @@ public struct GameProfile: Codable, Hashable, Sendable, Identifiable {
         name = try c.decode(String.self, forKey: .name)
         executables = try c.decodeIfPresent([String].self, forKey: .executables) ?? []
         steamAppIDs = try c.decodeIfPresent([Int].self, forKey: .steamAppIDs) ?? []
+        launchArguments = try c.decodeIfPresent([String].self, forKey: .launchArguments) ?? []
         backendPreference = try c.decodeIfPresent([GraphicsBackendID].self, forKey: .backendPreference) ?? []
         sync = try c.decodeIfPresent(SyncMode.self, forKey: .sync)
         windowsVersion = try c.decodeIfPresent(WindowsVersion.self, forKey: .windowsVersion)

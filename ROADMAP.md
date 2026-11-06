@@ -53,7 +53,7 @@ Tether is 1.0 when **all** of these are true:
 
 ### Steam
 - [ ] `steam` profile: Steam client in its own bottle, running the Windows `SteamSetup.exe`.
-- [ ] `steamwebhelper` (CEF) works: rendering, GPU and sandbox flags, and login. Track known CrossOver and Proton fixes and upstream what we can.
+- [x] `steamwebhelper` (CEF) works: rendering, GPU and sandbox flags, and login. Track known CrossOver and Proton fixes and upstream what we can. Manual test on the wrapped arm64 runtime (wine 11.19): login and page switching work with `-cef-disable-gpu` (now in the `steam` profile's `launchArguments`); without it the window went blank after switching pages. Not yet tested: long sessions, installing or launching a game, Steam Guard, and whether sandbox flags matter.
 - [x] **Library import:** parse `steamapps/libraryfolders.vdf` and `appmanifest_<appid>.acf` to list installed games with app IDs (`tether steam list <bottle>`). Tested on synthetic manifests only; still to be checked against a real Steam install.
 - [ ] **Launch by app ID:** `steam.exe -silent` plus `steam://rungameid/<appid>`, so Steamworks DRM, Cloud saves, and achievements work normally.
 - [x] Per-game profile matching by Steam app ID (`steamAppIDs` on `GameProfile`; `LaunchRequest.steamAppID` beats exe-name matching).
@@ -67,7 +67,7 @@ Tether is 1.0 when **all** of these are true:
 
 ### Shared
 - [ ] Profile matching by launcher-provided IDs, not only exe names.
-- [ ] Launch-parameter passthrough (per-game args stored in the bottle).
+- [ ] Launch-parameter passthrough (per-game args stored in the bottle). Per-profile `launchArguments` exist; per-bottle storage does not yet.
 
 **Exit:** Steam and Battle.net pass a scripted checklist (install → login → install game → launch → quit → relaunch) on two macOS versions.
 

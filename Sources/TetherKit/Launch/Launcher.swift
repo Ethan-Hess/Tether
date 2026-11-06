@@ -88,7 +88,7 @@ public struct Launcher: Sendable {
             runtime: runtime,
             environment: env,
             executableURL: runtime.wineBinary,
-            arguments: [request.executable] + request.arguments,
+            arguments: [request.executable] + (profile?.launchArguments ?? []) + request.arguments,
             workingDirectory: workingDirectory,
             ignoredBackendChoice: {
                 guard let choice = request.bottle.config.backend, choice != backend.id else { return nil }

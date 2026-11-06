@@ -216,3 +216,42 @@ import Testing
         #expect(explicit?.id == "cs2")
     }
 }
+
+@Suite struct LaunchArgumentTests {
+    let home = TempHome()
+
+    private func installRuntime() throws {
+        let root = home.paths.runtimes.appendingPathComponent("0.1.0")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let manifest = RuntimeManifest(version: "0.1.0", wineVersion: "11.19", features: ["msync"], components: [])
+        try JSONEncoder().encode(manifest).write(to: root.appendingPathComponent("runtime.json"))
+    }
+
+    @Test func profileArgumentsComeBeforeUserArguments() throws {
+        try installRuntime()
+        let profile = GameProfile(id: "g", name: "G", executables: ["g.exe"], launchArguments: ["-a", "-b"])
+        let bottle = try BottleStore(paths: home.paths).create(name: "b")
+        let launcher = Launcher(paths: home.paths, profiles: ProfileLibrary(profiles: [profile]))
+        let plan = try launcher.plan(LaunchRequest(bottle: bottle, executable: "C:\\g.exe", arguments: ["-user"]))
+        #expect(plan.arguments == ["C:\\g.exe", "-a", "-b", "-user"])
+    }
+
+    @Test func noProfileMeansNoExtraArguments() throws {
+        try installRuntime()
+        let bottle = try BottleStore(paths: home.paths).create(name: "b")
+        let launcher = Launcher(paths: home.paths, profiles: ProfileLibrary(profiles: []))
+        let plan = try launcher.plan(LaunchRequest(bottle: bottle, executable: "C:\\x.exe", arguments: ["-user"]))
+        #expect(plan.arguments == ["C:\\x.exe", "-user"])
+    }
+
+    @Test func profilesWithoutLaunchArgumentsStillDecode() throws {
+        let p = try JSONDecoder().decode(GameProfile.self, from: Data(#"{"id":"x","name":"X"}"#.utf8))
+        #expect(p.launchArguments.isEmpty)
+    }
+
+    @Test func builtinSteamProfileDisablesCEFGPUAndMatchesSteamExe() throws {
+        let steam = try #require(ProfileLibrary.load(paths: home.paths).match(executable: "C:\\Program Files (x86)\\Steam\\Steam.exe"))
+        #expect(steam.id == "steam")
+        #expect(steam.launchArguments == ["-cef-disable-gpu"])
+    }
+}
