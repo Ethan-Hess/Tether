@@ -63,6 +63,7 @@ swift run tether run --wait steam ~/Downloads/SteamSetup.exe /S
 swift run tether run steam 'C:\Program Files (x86)\Steam\Steam.exe'   # log in, install a game
 swift run tether steam list steam                                     # installed games and app IDs
 swift run tether steam launch steam <appid>
+swift run tether bottle set steam --arg=-silent                       # extra launch arguments for this bottle (use the = form)
 swift run tether env steam 'C:\Program Files (x86)\Steam\Steam.exe'   # inspect the exact launch env
 ```
 

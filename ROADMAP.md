@@ -55,10 +55,10 @@ Tether is 1.0 when **all** of these are true:
 - [x] `steam` profile: Steam client in its own bottle, running the Windows `SteamSetup.exe` (`/S` silent install works; installing it from the app is still an M5 item).
 - [x] `steamwebhelper` (CEF) works: rendering, GPU and sandbox flags, and login. Track known CrossOver and Proton fixes and upstream what we can. Manual test on the wrapped arm64 runtime (wine 11.19): login and page switching work with `-cef-disable-gpu` (now in the `steam` profile's `launchArguments`); without it the window went blank after switching pages. Not yet tested: long sessions, installing or launching a game, Steam Guard, and whether sandbox flags matter.
 - [x] **Library import:** parse `steamapps/libraryfolders.vdf` and `appmanifest_<appid>.acf` to list installed games with app IDs (`tether steam list <bottle>`). Tested on synthetic manifests only; still to be checked against a real Steam install.
-- [x] **Launch by app ID:** `tether steam launch <bottle> <appid>` runs Steam.exe with `steam://rungameid/<appid>`, so Steamworks DRM, Cloud saves, and achievements work normally. Checked on one game (There Are No Orcs, Unity, D3D11) from a cold start on the wrapped arm64 runtime: Steam started and the game ran and looked fine in a manual check. Not yet applied: the game's own profile (its env and launch arguments), `-silent`, and Cloud saves or achievements were not tested.
+- [x] **Launch by app ID:** `tether steam launch <bottle> <appid>` runs Steam.exe with `steam://rungameid/<appid>`, so Steamworks DRM, Cloud saves, and achievements work normally. Checked on one game (There Are No Orcs, Unity, D3D11) from a cold start on the wrapped arm64 runtime: Steam started and the game ran and looked fine in a manual check. The game's own backend rule applies through its app ID; its other profile settings don't (see Launch-parameter passthrough). `-silent`, Cloud saves and achievements were not tested.
 - [x] Per-game profile matching by Steam app ID (`steamAppIDs` on `GameProfile`; `LaunchRequest.steamAppID` beats exe-name matching).
 - [ ] **Overwatch 2** (Steam app 2357570) tested on DXMT, installed and launched through Steam. Untested so far; also check whether the Steam version needs the Battle.net app or only an account login. Fill in the per-game notes in `docs/ANTICHEAT.md`.
-- [ ] Steam Overlay: the overlay is Steam's own in-guest feature, not Tether injection, and is left to the user's Steam settings. Document this distinction in ADR 0003.
+- [x] Steam Overlay: the overlay is Steam's own in-guest feature, not Tether injection, and is left to the user's Steam settings. Documented in [ADR 0003](docs/adr/0003-no-process-injection.md).
 - [ ] Controller pass-through: Steam Input and SDL inside Wine.
 - [ ] *Research:* a bridge from Windows games to the **native macOS Steam client** (similar in spirit to Proton's `lsteamclient`, which targets Linux), so games don't need Windows Steam running inside every bottle. Saves memory and CPU, but it's a large project. Decide go or no-go after M2.
 
@@ -66,7 +66,7 @@ Battle.net as a launcher is out of scope (decided); games from Blizzard, such as
 
 ### Shared
 - [ ] Profile matching by launcher-provided IDs, not only exe names.
-- [ ] Launch-parameter passthrough (per-game args stored in the bottle). Per-profile `launchArguments` exist; per-bottle storage does not yet.
+- [x] Launch-parameter passthrough: `launchArguments` on profiles and, per bottle, `tether bottle set <b> --arg=<value>` (applied to every executable run in the bottle, in the order profile, bottle, command line). Under Steam a game's own profile contributes its backend rule (through its app ID in `compat.rules`) but not its environment, sync or arguments, which apply only to direct runs: a game started by an already-running Steam inherits Steam's environment, so they would work only on cold starts.
 
 **Exit:** Steam passes a scripted checklist (install → login → install game → launch → quit → relaunch) on a supported macOS version.
 
