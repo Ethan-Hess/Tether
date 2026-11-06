@@ -60,9 +60,10 @@ public struct SystemCheck: Sendable {
             detail: runtimes.isEmpty ? "none installed (run: tether runtime install)" : runtimes.map(\.version).joined(separator: ", ")
         ))
 
-        // A runtime carrying the quarantine attribute is blocked by Gatekeeper, because the
-        // loader is signed but not notarized on its own (docs/spikes/distribution.md).
-        let quarantined = runtimes.filter { Quarantine.isQuarantined($0) }
+        // A quarantined runtime is blocked by Gatekeeper when its loader is signed but not
+        // notarized (arm64-11.19-1). A runtime with the `notarized-loader` feature (11.20-5 and
+        // newer) runs even when quarantined, so it is not flagged (docs/spikes/distribution.md).
+        let quarantined = runtimes.filter { Quarantine.isQuarantined($0) && !$0.supports(feature: "notarized-loader") }
         if !runtimes.isEmpty {
             items.append(Item(
                 name: "Runtime not quarantined",

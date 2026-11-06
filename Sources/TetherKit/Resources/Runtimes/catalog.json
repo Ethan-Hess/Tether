@@ -3,7 +3,12 @@
     {
       "version": "0.1.0",
       "wineVersion": "11.19",
-      "features": ["msync", "fex", "arm64ec", "managed-graphics"],
+      "features": [
+        "msync",
+        "fex",
+        "arm64ec",
+        "managed-graphics"
+      ],
       "components": [
         {
           "name": "wine",
@@ -14,6 +19,30 @@
       "url": "https://github.com/athei/mach9/releases/download/arm64-11.19-1/wine-arm64-11.19-1-macos-arm64.tar.xz",
       "sha256": "b9c5e88bf2b2c24097b4d833a4d80cb5648011854c39d4f5086b66780cad1ba4",
       "size": 109787992,
+      "stripComponents": 1,
+      "minimumMacOS": "26.4"
+    },
+    {
+      "version": "0.2.0",
+      "wineVersion": "11.20",
+      "features": [
+        "msync",
+        "fex",
+        "arm64ec",
+        "managed-graphics",
+        "compat-rules",
+        "notarized-loader"
+      ],
+      "components": [
+        {
+          "name": "wine",
+          "version": "11.20-33-g10f3ccc905 (arm64-11.20-5)",
+          "source": "https://github.com/athei/mach9/releases/tag/arm64-11.20-5"
+        }
+      ],
+      "url": "https://github.com/athei/mach9/releases/download/arm64-11.20-5/wine-arm64-11.20-5-macos-arm64.tar.xz",
+      "sha256": "8083f8e84c012d707a623060c0fc11fbea9ae810dcfe3b0252a0bd14410cad48",
+      "size": 129039440,
       "stripComponents": 1,
       "minimumMacOS": "26.4"
     }

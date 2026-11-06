@@ -5,12 +5,12 @@ import Testing
 @Suite struct QuarantineTests {
     let home = TempHome()
 
-    private func makeRuntime(version: String = "0.1.0") throws -> WineRuntime {
+    private func makeRuntime(version: String = "0.1.0", features: [String] = []) throws -> WineRuntime {
         let root = home.paths.runtimes.appendingPathComponent(version)
         let exe = root.appendingPathComponent("lib/wine/aarch64-unix/wine.app/Contents/MacOS/wine")
         try FileManager.default.createDirectory(at: exe.deletingLastPathComponent(), withIntermediateDirectories: true)
         try "x".write(to: exe, atomically: true, encoding: .utf8)
-        let manifest = RuntimeManifest(version: version, wineVersion: "11.19", features: [], components: [])
+        let manifest = RuntimeManifest(version: version, wineVersion: "11.19", features: features, components: [])
         try JSONEncoder().encode(manifest).write(to: root.appendingPathComponent("runtime.json"))
         return WineRuntime(root: root, manifest: manifest)
     }
@@ -46,6 +46,14 @@ import Testing
         let flagged = item(SystemCheck.run(paths: home.paths))
         #expect(flagged?.ok == false)
         #expect(flagged?.detail.contains("0.1.0") == true)
+    }
+
+    @Test func aQuarantinedRuntimeWithANotarizedLoaderIsNotFlagged() throws {
+        let runtime = try makeRuntime(features: ["notarized-loader"])
+        quarantine(runtime.loaderApp)
+        #expect(Quarantine.isQuarantined(runtime), "the attribute is still there")
+        let item = SystemCheck.run(paths: home.paths).items.first { $0.name == "Runtime not quarantined" }
+        #expect(item?.ok == true)
     }
 
     @Test func noRuntimeMeansNoQuarantineItem() {
