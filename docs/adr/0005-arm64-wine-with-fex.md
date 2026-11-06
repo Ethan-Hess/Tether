@@ -31,5 +31,6 @@ Closed: the D3D11 sample ran through DXMT on the arm64 runtime (see the spike), 
 - The macOS floor rises to 26.4 for gameplay, which excludes older systems.
 - `WineRuntime`, `Launcher` and the runtime layout docs assume x86_64 (`lib/wine/x86_64-unix`) and must change: the arm64 build uses `aarch64-unix` and keeps the real loader inside a signed `wine.app`.
 - Backends (DXMT, DXVK) need ARM64X/ARM64EC builds for best performance; until then their Windows side runs as x86_64 under FEX.
+- A wrapped runtime selects DXMT or wined3d per executable with its own compatibility database (I could not disable it with `WINE_COMPATDB`). Tether models this as the `runtime` backend (runtime feature `managed-graphics`): it installs no DLLs and sets no overrides, `tether env`/`run` report the backend as runtime-managed, and a bottle's forced backend is reported as ignored. Forcing a specific backend needs either runtime support or our own runtime build.
 - `build-wine.sh` must be reworked for arm64 (or replaced by a wrap-and-verify step).
 - Anti-cheat policy is unchanged. FEX is a standard translation layer, not process injection, so ADR 0003 still holds. Revisit if any FEX feature needs host-side hooks.

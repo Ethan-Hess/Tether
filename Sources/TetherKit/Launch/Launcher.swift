@@ -26,6 +26,9 @@ public struct LaunchPlan: Sendable {
     public var executableURL: URL
     public var arguments: [String]
     public var workingDirectory: URL
+    /// A backend the bottle explicitly asked for that this runtime can't honour because it
+    /// manages graphics itself. Surfaced so the CLI/UI can say so instead of silently ignoring it.
+    public var ignoredBackendChoice: GraphicsBackendID? = nil
 }
 
 /// Spawns Wine processes for a bottle.
@@ -82,7 +85,11 @@ public struct Launcher: Sendable {
             environment: env,
             executableURL: runtime.wineBinary,
             arguments: [request.executable] + request.arguments,
-            workingDirectory: workingDirectory
+            workingDirectory: workingDirectory,
+            ignoredBackendChoice: {
+                guard let choice = request.bottle.config.backend, choice != backend.id else { return nil }
+                return backend.id == .runtimeManaged ? choice : nil
+            }()
         )
     }
 

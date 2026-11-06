@@ -10,6 +10,9 @@ public enum GraphicsBackendID: String, Codable, CaseIterable, Sendable {
     case d3dmetal
     /// Wine's built-in wined3d (D3D → OpenGL). Last-resort fallback.
     case wined3d
+    /// The runtime picks DXMT, wined3d, etc. per executable with its own compatibility database
+    /// (wrapped community runtimes, ADR 0005). Tether does not choose or install anything.
+    case runtimeManaged = "runtime"
 }
 
 public enum DirectXAPI: String, Codable, CaseIterable, Sendable {
@@ -72,7 +75,12 @@ public extension GraphicsBackend {
 
 /// Registry of all known backends.
 public enum GraphicsBackends {
-    public static let all: [any GraphicsBackend] = [DXMTBackend(), DXVKBackend(), D3DMetalBackend(), WineD3DBackend()]
+    public static let all: [any GraphicsBackend] = [
+        RuntimeManagedBackend(), DXMTBackend(), DXVKBackend(), D3DMetalBackend(), WineD3DBackend(),
+    ]
+
+    /// Runtime feature meaning "this runtime chooses the graphics backend per game itself".
+    public static let managedFeature = "managed-graphics"
 
     public static func backend(for id: GraphicsBackendID) -> any GraphicsBackend {
         all.first { $0.id == id }!
@@ -89,6 +97,10 @@ public enum GraphicsBackends {
         runtime: WineRuntime,
         paths: TetherPaths
     ) -> any GraphicsBackend {
+        // A runtime that manages graphics itself would ignore anything Tether installed or
+        // overrode, so don't pretend to choose: report what is really happening.
+        if runtime.supports(feature: managedFeature) { return RuntimeManagedBackend() }
+
         var order: [GraphicsBackendID] = []
         if let bottleChoice { order.append(bottleChoice) }
         if let profile { order.append(contentsOf: profile.backendPreference) }

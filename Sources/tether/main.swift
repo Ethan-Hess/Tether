@@ -116,7 +116,8 @@ struct Run: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Run a Windows executable in a bottle.")
     @Argument var bottle: String
     @Argument(help: "Windows path (C:\\...) or host path to a .exe") var executable: String
-    @Argument(parsing: .captureForPassthrough) var arguments: [String] = []
+    @Argument(parsing: .remaining, help: "Arguments for the game. Put `--` first if they start with a dash: `tether run t game.exe -- -windowed`.")
+    var arguments: [String] = []
     @Option var profile: String?
     @Flag(help: "Enable Wine/backend logging to the bottle's logs/wine.log.") var debug = false
     @Flag(help: "Wait for the process to exit.") var wait = false
@@ -126,6 +127,7 @@ struct Run: ParsableCommand {
         let b = try BottleStore().load(name: bottle)
         let plan = try launcher.plan(LaunchRequest(bottle: b, executable: executable, arguments: arguments, profileID: profile, debug: debug))
         printPolicyWarnings(plan.environment)
+        printBackendNotice(plan)
         let process = try launcher.launch(plan)
         print("Started (pid \(process.processIdentifier)) with \(plan.environment.backend.displayName)")
         if wait {
@@ -149,11 +151,17 @@ struct Env: ParsableCommand {
         print("# backend: \(plan.environment.backend.displayName)")
         print("# profile: \(plan.environment.profile?.name ?? "none")")
         printPolicyWarnings(plan.environment)
+        printBackendNotice(plan)
         for (k, v) in plan.environment.variables.sorted(by: { $0.key < $1.key }) {
             print("\(k)=\(v)")
         }
         print("# exec: \(([plan.executableURL.path] + plan.arguments).joined(separator: " "))")
     }
+}
+
+func printBackendNotice(_ plan: LaunchPlan) {
+    guard let ignored = plan.ignoredBackendChoice else { return }
+    FileHandle.standardError.write("note: this runtime chooses the graphics backend per game itself, so the bottle's '\(ignored.rawValue)' setting has no effect\n".data(using: .utf8)!)
 }
 
 func printPolicyWarnings(_ env: LaunchEnvironment) {
