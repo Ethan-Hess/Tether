@@ -41,6 +41,15 @@ exe=Game.exe;d3d9=wined3d;metal_hud=true
 - Bundled third-party libraries seen in `lib/external`: SDL2/SDL3, freetype, GMP, gnutls, nettle (`libhogweed`), libidn2, libintl, p11-kit, libpng, libtasn1, libunistring, the Vulkan loader and KosmicKrisp (Mesa). Wine is LGPL and FEX is MIT (the latter per MetalSharp's notes, not checked at the source); DXMT's licence has not been checked. Several of these libraries are LGPL, which needs notices and a source offer.
 - Open: collect the exact versions and licence texts from the release (or Mach9's pins), and decide how the app shows them (a notices screen, plus source links).
 
+## Update: Mach9 `arm64-11.20-5` (2026-11-05)
+Everything above was measured on the first pinned release, `arm64-11.19-1`. The newer `arm64-11.20-5` (catalog runtime `0.2.0`) differs in two ways that matter here.
+
+- **Its loader is notarized.** `codesign --verify --strict` passes, the hardened runtime flag, a secure timestamp (2026-10-30) and the cross-architecture entitlement are present, and `spctl -a -vvv -t exec` reports **Notarized Developer ID** (the old release said Unnotarized). I did not check whether a ticket is stapled.
+- **A quarantined copy is not blocked.** I copied the runtime, set `com.apple.quarantine` on every file and ran `bin/wine --version`: no dialog, correct output (`wine-11.20-33-g10f3ccc905`). The first launch took 27 seconds, which I take to be macOS's online notarization check; a second launch took under a second. The quarantine attribute was unchanged afterwards.
+- **It supports compat rules.** `WINE_COMPATDB_FILE` and `steam:<appid>` rules appear in its docs and release notes and worked in testing (see ADR 0005). `arm64-11.19-1` has neither, and the docs at the `11.19-3` and `11.20-1` tags don't mention the file variable; I did not check `11.19-2`, `11.20-2`, `-3` or `-4`.
+- **Effect on the findings above:** the "blocked by Gatekeeper" result and the stand-in app experiment describe `11.19-1`. With `11.20-5`, download-on-demand also looks viable, since a quarantined loader runs. The delivery decision (embed in Tether.app) is unchanged for now and can be revisited; `tether doctor` no longer reports quarantine as a problem for a runtime with a notarized loader.
+- **Not tested:** the first launch with no network (the notarization check needs Apple's servers), and the stand-in app flow with this release.
+
 ## Options for delivery
 | Option | Notes |
 |--------|-------|

@@ -42,7 +42,7 @@ Tether is 1.0 when **all** of these are true:
 - [ ] **MoltenVK** (`fetch-moltenvk.sh`): pinned release with a checksum.
 - [ ] **Packaging** (`package-runtime.sh`): `runtime.json`, ad-hoc signing, a `.tar.xz` with SHA-256.
 - [ ] **CI** *(deferred: builds and checks run locally for now)*: GitHub Actions on Apple Silicon macOS runners builds the runtime on tag. Release artifacts include checksums and a minisign signature.
-- [x] `tether runtime install [version]`: download, verify the pinned hash, unpack into `Runtimes/`. For development and rollback testing; 1.0 embeds the runtime in the notarized app (M6). The installed runtime must not be quarantined (`tether doctor` checks).
+- [x] `tether runtime install [version]`: download, verify the pinned hash, unpack into `Runtimes/`. Catalog: `0.1.0` is Mach9 `arm64-11.19-1` (no compat rules, loader not notarized); `0.2.0` is `arm64-11.20-5` (compat rules, notarized loader) and is the default. For development and rollback testing; 1.0 embeds the runtime in the app (M6). The installed runtime must not be quarantined (`tether doctor` checks).
 - [ ] **Smoke test set:** `notepad`, `winecfg`, and a redistributable D3D11 sample (built from Microsoft's open-source DirectX samples), run headless in CI where Metal is available.
 
 **Exit:** a fresh Mac runs `tether runtime install && tether bottle create t && tether run t d3d11-sample.exe`, and the sample renders through DXMT. `tether env` shows `WINEMSYNC=1`.

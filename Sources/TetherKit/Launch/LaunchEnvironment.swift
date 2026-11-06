@@ -15,7 +15,12 @@ public struct LaunchEnvironment: Sendable {
     /// Keys that profiles/bottles may not set. These are either Tether-owned or
     /// code-injection vectors (ADR 0003).
     public static func isProtected(_ key: String) -> Bool {
-        let owned: Set<String> = ["WINEPREFIX", "WINEDLLOVERRIDES", "WINEDLLPATH", "WINESERVER", "WINELOADER", "PATH"]
+        let owned: Set<String> = [
+            "WINEPREFIX", "WINEDLLOVERRIDES", "WINEDLLPATH", "WINESERVER", "WINELOADER", "PATH",
+            // The runtime's compat rules are written by Tether (CompatRules.swift) and may only
+            // choose graphics implementations; they can also carry arguments, env and overrides.
+            "WINE_COMPATDB", "WINE_COMPATDB_FILE",
+        ]
         return owned.contains(key) || key.hasPrefix("DYLD_")
     }
 
@@ -58,6 +63,12 @@ public struct LaunchEnvironment: Sendable {
         env["WINEDEBUG"] = options.debug ? "fixme-all,err+all" : "-all"
         if let extra = backend.builtinSearchPath(runtime: runtime, paths: paths) {
             env["WINEDLLPATH"] = extra.path
+        }
+        // Always point a managed runtime at the bottle's rules file (even when empty): the file is
+        // rewritten before each launch, and a game started by a running Steam reads it fresh,
+        // whereas an inherited WINE_COMPATDB value would be stale.
+        if runtime.supports(feature: GraphicsBackends.compatRulesFeature) {
+            env["WINE_COMPATDB_FILE"] = bottle.compatRulesURL.path
         }
 
         // Backend

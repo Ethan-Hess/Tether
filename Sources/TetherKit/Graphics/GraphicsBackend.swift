@@ -82,6 +82,10 @@ public enum GraphicsBackends {
     /// Runtime feature meaning "this runtime chooses the graphics backend per game itself".
     public static let managedFeature = "managed-graphics"
 
+    /// Runtime feature meaning "reads compat rules from `WINE_COMPATDB_FILE`" (CompatRules.swift).
+    /// Older runtimes (arm64-11.19-1) have no such file support and would ignore it silently.
+    public static let compatRulesFeature = "compat-rules"
+
     public static func backend(for id: GraphicsBackendID) -> any GraphicsBackend {
         all.first { $0.id == id }!
     }

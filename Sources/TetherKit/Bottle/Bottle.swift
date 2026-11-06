@@ -78,6 +78,8 @@ public struct Bottle: Identifiable, Hashable, Sendable {
     /// Shader / pipeline caches, persisted across launches so stutter only happens once.
     public var cacheURL: URL { root.appendingPathComponent("cache", isDirectory: true) }
     public var logsURL: URL { root.appendingPathComponent("logs", isDirectory: true) }
+    /// Compat rules for a runtime that chooses graphics per process, rewritten before each launch.
+    public var compatRulesURL: URL { root.appendingPathComponent("compat.rules") }
 
     public var driveC: URL { prefixURL.appendingPathComponent("drive_c", isDirectory: true) }
     public var system32: URL { driveC.appendingPathComponent("windows/system32", isDirectory: true) }

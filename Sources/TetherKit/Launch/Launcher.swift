@@ -32,6 +32,8 @@ public struct LaunchPlan: Sendable {
     /// A backend the bottle explicitly asked for that this runtime can't honour because it
     /// manages graphics itself. Surfaced so the CLI/UI can say so instead of silently ignoring it.
     public var ignoredBackendChoice: GraphicsBackendID? = nil
+    /// Rules written to the bottle's rules file at launch (empty for runtimes that don't use them).
+    public var compatRules: CompatTable = CompatTable()
 }
 
 /// Spawns Wine processes for a bottle.
@@ -69,6 +71,7 @@ public struct Launcher: Sendable {
             runtime: runtime,
             paths: paths
         )
+        let rulesCapable = runtime.supports(feature: GraphicsBackends.compatRulesFeature)
         let env = LaunchEnvironment(
             bottle: request.bottle,
             runtime: runtime,
@@ -90,16 +93,25 @@ public struct Launcher: Sendable {
             executableURL: runtime.wineBinary,
             arguments: [request.executable] + (profile?.launchArguments ?? []) + request.arguments,
             workingDirectory: workingDirectory,
+            // A runtime with rules honours dxmt and wined3d; one without chooses by itself, and
+            // anything else is never available, so report what was asked for but can't be applied.
             ignoredBackendChoice: {
-                guard let choice = request.bottle.config.backend, choice != backend.id else { return nil }
-                return backend.id == .runtimeManaged ? choice : nil
-            }()
+                guard backend.id == .runtimeManaged, let choice = request.bottle.config.backend,
+                      choice != .runtimeManaged
+                else { return nil }
+                return rulesCapable && CompatRuleBuilder.choice(for: choice) != nil ? nil : choice
+            }(),
+            compatRules: rulesCapable
+                ? CompatRuleBuilder.build(bottle: request.bottle, profiles: profiles.profiles, launchedExecutable: request.executable)
+                : CompatTable()
         )
     }
 
     /// Prepares the prefix (first-run init, backend DLLs) and starts the process.
     @discardableResult
     public func launch(_ plan: LaunchPlan) throws -> Process {
+        // First, so even the first-run prefix setup finds the file the environment points at.
+        try writeCompatRules(plan)
         if !isPrefixInitialized(plan.bottle) {
             try initializePrefix(plan.bottle, runtime: plan.runtime, environment: plan.environment)
         }
@@ -115,6 +127,15 @@ public struct Launcher: Sendable {
         try process.run()
         TetherLog.launch.info("Launched \(plan.arguments.first ?? "?", privacy: .public) in \(plan.bottle.name, privacy: .public) via \(plan.environment.backend.id.rawValue, privacy: .public)")
         return process
+    }
+
+    /// Writes the bottle's rules file when the launch environment points at it. The write is
+    /// atomic (temp file, then rename) because processes read the file as they start and a
+    /// partial file would give them a partial table without a warning.
+    public func writeCompatRules(_ plan: LaunchPlan) throws {
+        guard plan.environment.variables["WINE_COMPATDB_FILE"] == plan.bottle.compatRulesURL.path else { return }
+        let text = plan.compatRules.text
+        try Data((text.isEmpty ? "" : text + "\n").utf8).write(to: plan.bottle.compatRulesURL, options: .atomic)
     }
 
     public func isPrefixInitialized(_ bottle: Bottle) -> Bool {

@@ -155,13 +155,26 @@ struct Env: ParsableCommand {
         for (k, v) in plan.environment.variables.sorted(by: { $0.key < $1.key }) {
             print("\(k)=\(v)")
         }
+        if plan.compatRules.rules.isEmpty {
+            if plan.environment.variables["WINE_COMPATDB_FILE"] != nil { print("# compat rules: none (the runtime chooses)") }
+        } else {
+            print("# compat rules (written to the bottle's compat.rules at launch):")
+            for line in plan.compatRules.text.split(separator: "\n") { print("#   \(line)") }
+        }
         print("# exec: \(([plan.executableURL.path] + plan.arguments).joined(separator: " "))")
     }
 }
 
 func printBackendNotice(_ plan: LaunchPlan) {
-    guard let ignored = plan.ignoredBackendChoice else { return }
-    FileHandle.standardError.write("note: this runtime chooses the graphics backend per game itself, so the bottle's '\(ignored.rawValue)' setting has no effect\n".data(using: .utf8)!)
+    if let ignored = plan.ignoredBackendChoice {
+        let why = plan.runtime.supports(feature: GraphicsBackends.compatRulesFeature)
+            ? "it offers dxmt and wined3d"
+            : "it chooses the backend itself"
+        FileHandle.standardError.write("note: the bottle's '\(ignored.rawValue)' backend can't be applied with this runtime (\(why)), so the setting has no effect\n".data(using: .utf8)!)
+    }
+    if plan.compatRules.disablesD3D12 {
+        FileHandle.standardError.write("note: wined3d has no Direct3D 12, so games that need it won't start with this backend\n".data(using: .utf8)!)
+    }
 }
 
 func printPolicyWarnings(_ env: LaunchEnvironment) {
