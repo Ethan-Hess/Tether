@@ -92,9 +92,9 @@ public struct RuntimeManagedBackend: GraphicsBackend {
         runtime.supports(feature: GraphicsBackends.managedFeature)
     }
 
-    public func environment(options: BackendOptions) -> [String: String] {
-        options.showHUD ? ["MTL_HUD_ENABLED": "1"] : [:]
-    }
+    /// No environment: the HUD goes through the runtime's `metal_hud` rule (CompatRules.swift),
+    /// which the runtime's authors ask launchers to use instead of `MTL_HUD_` variables.
+    public func environment(options: BackendOptions) -> [String: String] { [:] }
 }
 
 public struct WineD3DBackend: GraphicsBackend {

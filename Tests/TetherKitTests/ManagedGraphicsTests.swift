@@ -36,10 +36,10 @@ import Testing
         #expect(BackendInstaller(paths: home.paths).plan(backend: backend, runtime: managed, bottle: bottle).isEmpty)
     }
 
-    @Test func hudMapsToMetalHUD() {
+    @Test func hudGoesThroughRulesNotEnvironment() {
+        // The runtime's authors ask launchers to use the metal_hud rule, not MTL_HUD_ variables.
         let on = RuntimeManagedBackend().environment(options: BackendOptions(showHUD: true, cacheDirectory: home.root))
-        #expect(on["MTL_HUD_ENABLED"] == "1")
-        #expect(RuntimeManagedBackend().environment(options: BackendOptions(cacheDirectory: home.root)).isEmpty)
+        #expect(on.isEmpty)
     }
 
     @Test func planReportsIgnoredForcedBackend() throws {
