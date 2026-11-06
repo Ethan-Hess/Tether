@@ -41,6 +41,8 @@ public struct WineRuntime: Hashable, Sendable {
     public var wineBinary: URL { root.appendingPathComponent("bin/wine") }
     public var wineserverBinary: URL { root.appendingPathComponent("bin/wineserver") }
     public var libDirectory: URL { root.appendingPathComponent("lib", isDirectory: true) }
+    /// The signed loader bundle that carries the cross-architecture entitlement. Never modify or re-sign it.
+    public var loaderApp: URL { root.appendingPathComponent("lib/wine/aarch64-unix/wine.app", isDirectory: true) }
 
     public func backendDirectory(for id: GraphicsBackendID) -> URL {
         root.appendingPathComponent("backends/\(id.rawValue)", isDirectory: true)

@@ -21,8 +21,9 @@ FEX needs 4K pages while macOS arm64 uses 16K. The community builds solve this w
 - **Build tools** use the user's arm64 Homebrew. No x86_64 prefix is required.
 
 ## Open items before this is Accepted
-1. **Delivery decision.** The bare `wine.app` is Developer ID signed (hardened runtime, secure timestamp) but not notarized, and a copy carrying the quarantine attribute was blocked by Gatekeeper in a test. Our `URLSession` download is not quarantined and runs, but that is fragile. Choose: embed the pinned runtime in a notarized Tether.app (what Mach9.app does), or keep download-on-demand. See the [distribution spike](../spikes/distribution.md).
-2. **Licence inventory.** The bundle ships no licence or notice files, and its third-party libraries (gnutls, nettle, GMP, SDL, freetype, Vulkan loader, Mesa/KosmicKrisp and others) need notices and source links before we redistribute it.
+1. **Licence inventory.** The bundle ships no licence or notice files, and its third-party libraries (gnutls, nettle, GMP, SDL, freetype, Vulkan loader, Mesa/KosmicKrisp and others) need notices and source links before we redistribute it.
+
+**Delivery (decided):** for 1.0 the pinned runtime is embedded in a notarized Tether.app, with `wine.app` left untouched, the way Mach9.app does it. The bare `wine.app` is Developer ID signed (hardened runtime, secure timestamp) but not notarized, and a copy carrying the quarantine attribute was blocked by Gatekeeper in a test, so download-on-demand is fragile. `tether runtime install` stays for development and rollback testing, and `tether doctor` flags a quarantined runtime. Runtime updates ship with app updates. Details in the [distribution spike](../spikes/distribution.md).
 
 Closed: the D3D11 sample ran through DXMT on the arm64 runtime (see the spike); the wrap-versus-build decision is made above; and the entitlement question is answered for wrapping, because Mach9 documents that an embedding app leaves `wine.app` untouched, so its signature and provisioning profile stay valid. Tether needs its own entitlement only if it builds its own loader.
 

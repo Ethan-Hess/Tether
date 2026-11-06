@@ -48,10 +48,9 @@ exe=Game.exe;d3d9=wined3d;metal_hud=true
 | B. Download on demand, unquarantined (current) | Works today and keeps the app small. Runs unnotarized third-party code outside notarization, breaks if anything quarantines it, and depends on Gatekeeper's current behaviour for non-quarantined files. |
 | C. Download, then strip quarantine after hash verification | Technically possible, but it means Tether overriding a Gatekeeper check on unnotarized code. Not recommended without an explicit decision. |
 
-## Recommendation
-Plan M6 around option A and keep `tether runtime install` for development and for runtime rollback testing. Until then, document that the runtime must not be quarantined. Add a check to `tether doctor` that flags a quarantine attribute on an installed runtime, since the failure is otherwise a confusing dialog.
+## Decision
+Option A, confirmed by the project owner: embed the pinned runtime in a notarized Tether.app for 1.0. Keep `tether runtime install` for development and for runtime rollback testing, and have `tether doctor` flag a quarantine attribute on an installed runtime, since the failure is otherwise a confusing dialog.
 
 ## Open items
-- Delivery decision (above), for the user.
 - Licence and version inventory for the bundle.
 - Whether a Tether.app that embeds the bundle notarizes cleanly (needs a test with a real signing identity, which we don't have in this environment).

@@ -42,7 +42,7 @@ Tether is 1.0 when **all** of these are true:
 - [ ] **MoltenVK** (`fetch-moltenvk.sh`): pinned release with a checksum.
 - [ ] **Packaging** (`package-runtime.sh`): `runtime.json`, ad-hoc signing, a `.tar.xz` with SHA-256.
 - [ ] **CI** *(deferred: builds and checks run locally for now)*: GitHub Actions on Apple Silicon macOS runners builds the runtime on tag. Release artifacts include checksums and a minisign signature.
-- [ ] `tether runtime install [version]`: download, verify signature and hash, unpack into `Runtimes/`.
+- [x] `tether runtime install [version]`: download, verify the pinned hash, unpack into `Runtimes/`. For development and rollback testing; 1.0 embeds the runtime in the notarized app (M6). The installed runtime must not be quarantined (`tether doctor` checks).
 - [ ] **Smoke test set:** `notepad`, `winecfg`, and a redistributable D3D11 sample (built from Microsoft's open-source DirectX samples), run headless in CI where Metal is available.
 
 **Exit:** a fresh Mac runs `tether runtime install && tether bottle create t && tether run t d3d11-sample.exe`, and the sample renders through DXMT. `tether env` shows `WINEMSYNC=1`.
@@ -128,8 +128,10 @@ Steam checklist: `scripts/steam-checklist.sh --app <id> --game-process <regex>` 
 
 ## M6: Distribution and trust
 
-- [ ] **Developer ID signing and notarization** for the app and runtime binaries. Use the hardened runtime with only the entitlements Wine needs (unsigned executable memory, disabled library validation for runtime dylibs), documented in an ADR.
-- [ ] **App updates** via Sparkle 2 (EdDSA-signed appcast). Runtime updates via the signed manifest from M1.
+- [ ] **Embed the pinned runtime in a notarized Tether.app** ([ADR 0005](docs/adr/0005-arm64-wine-with-fex.md), [distribution spike](docs/spikes/distribution.md)). Leave `lib/wine/aarch64-unix/wine.app` untouched (re-signing it loses its provisioning profile); sign the app's other Mach-O files with the hardened runtime. Verify that notarization accepts the nested loader with a real signing identity.
+- [ ] **Developer ID signing and notarization** for the app and any binaries Tether adds. Use the hardened runtime with only the entitlements needed, documented in an ADR.
+- [ ] **Licence notices:** inventory the bundle's third-party libraries and licences, add a notices screen and source links.
+- [ ] **App updates** via Sparkle 2 (EdDSA-signed appcast). Runtime updates ship with app updates (the embedded runtime is pinned by version and hash); a separate runtime download channel is not planned.
 - [ ] **Rollback:** keep the previous runtime and let bottles pin a version.
 - [ ] **Bottle schema migrations** (`schemaVersion` exists; add migrators and tests).
 - [ ] **Homebrew cask.**

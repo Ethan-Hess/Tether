@@ -8,6 +8,20 @@ public enum TetherLog {
     public static let runtime = Logger(subsystem: subsystem, category: "runtime")
 }
 
+/// macOS's download-origin marker. Files carrying it are assessed by Gatekeeper when first run.
+public enum Quarantine {
+    public static let attribute = "com.apple.quarantine"
+
+    public static func isQuarantined(_ url: URL) -> Bool {
+        getxattr(url.path, attribute, nil, 0, 0, XATTR_NOFOLLOW) >= 0
+    }
+
+    /// True when the runtime's loader app or its executable is quarantined.
+    public static func isQuarantined(_ runtime: WineRuntime) -> Bool {
+        [runtime.loaderApp, runtime.loaderApp.appendingPathComponent("Contents/MacOS/wine")].contains(where: isQuarantined)
+    }
+}
+
 /// Host checks surfaced by `tether doctor` and the app's first-run screen.
 public struct SystemCheck: Sendable {
     public struct Item: Sendable {
@@ -45,6 +59,19 @@ public struct SystemCheck: Sendable {
             ok: !runtimes.isEmpty,
             detail: runtimes.isEmpty ? "none installed (run: tether runtime install)" : runtimes.map(\.version).joined(separator: ", ")
         ))
+
+        // A runtime carrying the quarantine attribute is blocked by Gatekeeper, because the
+        // loader is signed but not notarized on its own (docs/spikes/distribution.md).
+        let quarantined = runtimes.filter { Quarantine.isQuarantined($0) }
+        if !runtimes.isEmpty {
+            items.append(Item(
+                name: "Runtime not quarantined",
+                ok: quarantined.isEmpty,
+                detail: quarantined.isEmpty
+                    ? "ok"
+                    : "macOS will block \(quarantined.map(\.version).joined(separator: ", ")); remove it and reinstall with `tether runtime install`"
+            ))
+        }
 
         let gptk = fm.fileExists(atPath: paths.userComponents.appendingPathComponent("d3dmetal").path)
         items.append(Item(name: "D3DMetal (optional)", ok: true, detail: gptk ? "imported" : "not imported (optional; needed for D3D12)"))
