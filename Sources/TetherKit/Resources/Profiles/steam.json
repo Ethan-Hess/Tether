@@ -1,0 +1,10 @@
+{
+  "id": "steam",
+  "name": "Steam",
+  "executables": ["steam.exe"],
+  "sync": "msync",
+  "windowsVersion": "win10",
+  "environment": {},
+  "dllOverrides": [],
+  "notes": "Windows Steam client, one per bottle. Install with `SteamSetup.exe /S`, then run C:\\Program Files (x86)\\Steam\\Steam.exe. On the wrapped arm64 runtime the runtime itself applies its steam-web-helper rule to steamwebhelper.exe; Tether sets no extra flags. Verified so far: silent install, client bootstrap, steamwebhelper and renderer processes start. Login and game launch are not verified yet."
+}
