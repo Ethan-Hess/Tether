@@ -31,7 +31,7 @@ public struct LaunchPlan: Sendable {
 /// Spawns Wine processes for a bottle.
 ///
 /// Tether's host process is never inside the game's address space: it only sets up files
-/// and environment, then `posix_spawn`s Wine (x86_64, translated by Rosetta 2). After that,
+/// and environment, then `posix_spawn`s Wine (native arm64; FEX translates x86 code). After that,
 /// the only interaction is waiting for exit or asking `wineserver` to shut down.
 public struct Launcher: Sendable {
     public let paths: TetherPaths

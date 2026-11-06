@@ -168,15 +168,58 @@ func printPolicyWarnings(_ env: LaunchEnvironment) {
 // MARK: - info commands
 
 struct RuntimeCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "runtime", abstract: "List installed Wine runtimes.")
-    func run() {
-        let all = RuntimeStore().list()
-        if all.isEmpty { print("No runtimes installed. See runtime/README.md."); return }
-        for r in all {
-            let comps = r.manifest.components.map { "\($0.name) \($0.version)" }.joined(separator: ", ")
-            print("\(r.version)\twine \(r.manifest.wineVersion)\t[\(r.manifest.features.joined(separator: ","))]\t\(comps)")
+    static let configuration = CommandConfiguration(
+        commandName: "runtime",
+        abstract: "List and install Wine runtimes.",
+        subcommands: [List.self, Install.self],
+        defaultSubcommand: List.self
+    )
+
+    struct List: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: "List installed runtimes.")
+        func run() {
+            let all = RuntimeStore().list()
+            if all.isEmpty { print("No runtimes installed. Run `tether runtime install`."); return }
+            for r in all {
+                let comps = r.manifest.components.map { "\($0.name) \($0.version)" }.joined(separator: ", ")
+                print("\(r.version)\twine \(r.manifest.wineVersion)\t[\(r.manifest.features.joined(separator: ","))]\t\(comps)")
+            }
         }
     }
+
+    struct Install: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: "Download, verify and install a runtime.")
+        @Argument(help: "Runtime version (default: newest in the catalog).") var version: String?
+
+        func run() throws {
+            guard let source = RuntimeCatalog.bundled().source(version: version) else {
+                throw ValidationError("No runtime \(version.map { "'\($0)'" } ?? "") in the catalog.")
+            }
+            let mb = Double(source.size) / 1_000_000
+            print("Installing runtime \(source.version) (wine \(source.wineVersion)), \(String(format: "%.0f", mb)) MB from \(source.url.host ?? "?")…")
+            print("The download is verified against a pinned SHA-256 before anything is unpacked.")
+            do {
+                let runtime = try blocking { try await RuntimeInstaller().install(source) }
+                print("Installed \(runtime.version) at \(runtime.root.path)")
+            } catch RuntimeInstallError.alreadyInstalled(let v) {
+                print("Runtime \(v) is already installed.")
+            }
+        }
+    }
+}
+
+/// Runs async work from a synchronous command and returns its result.
+final class ResultBox<T>: @unchecked Sendable { var result: Result<T, Error>? }
+
+func blocking<T: Sendable>(_ work: @escaping @Sendable () async throws -> T) throws -> T {
+    let box = ResultBox<T>()
+    let done = DispatchSemaphore(value: 0)
+    Task {
+        do { box.result = .success(try await work()) } catch { box.result = .failure(error) }
+        done.signal()
+    }
+    done.wait()
+    return try box.result!.get()
 }
 
 struct Backends: ParsableCommand {

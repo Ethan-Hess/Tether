@@ -15,7 +15,7 @@ let package = Package(
     targets: [
         .target(
             name: "TetherKit",
-            resources: [.copy("Resources/Profiles")]
+            resources: [.copy("Resources/Profiles"), .copy("Resources/Runtimes")]
         ),
         .executableTarget(
             name: "tether",

@@ -1,0 +1,21 @@
+{
+  "runtimes": [
+    {
+      "version": "0.1.0",
+      "wineVersion": "11.19",
+      "features": ["msync", "fex", "arm64ec"],
+      "components": [
+        {
+          "name": "wine",
+          "version": "11.19-17-ge2e42653b41",
+          "source": "https://github.com/athei/mach9/releases/tag/arm64-11.19-1"
+        }
+      ],
+      "url": "https://github.com/athei/mach9/releases/download/arm64-11.19-1/wine-arm64-11.19-1-macos-arm64.tar.xz",
+      "sha256": "b9c5e88bf2b2c24097b4d833a4d80cb5648011854c39d4f5086b66780cad1ba4",
+      "size": 109787992,
+      "stripComponents": 1,
+      "minimumMacOS": "26.4"
+    }
+  ]
+}
