@@ -70,7 +70,7 @@ Battle.net as a launcher is out of scope (decided); games from Blizzard, such as
 
 **Exit:** Steam passes a scripted checklist (install → login → install game → launch → quit → relaunch) on a supported macOS version.
 
-Steam checklist: `scripts/steam-checklist.sh --app <id> --game-process <regex>` (login and game install are done by a person; it verifies the result and writes a report). So far it has run once, non-interactively, against an existing bottle on macOS 26.6.2 (9 passed, 0 failed, 2 skipped: install and bottle creation). A from-scratch run is still needed, and it checks that processes start and stop, not that the picture is correct.
+Steam checklist: `scripts/steam-checklist.sh --app <id> --game-process <regex>` (login and game install are done by a person; it verifies the result and writes a report). Runs so far on macOS 26.6.2: an existing bottle on runtime 0.1.0 (9 passed, 0 failed, 2 skipped); then a **from-scratch run on runtime 0.2.0** (new bottle, Steam installed, login and game install by hand): 10 passed, 1 failed, the cold relaunch (game process didn't appear within 180 s; Steam's log for that session stopped about two seconds after startup, cause not identified). The same bottle then passed a non-interactive rerun (9 passed, 0 failed, 2 skipped), and five further cold relaunches by hand worked (about 15 s each), so the failure is unexplained and not reproduced. The script now runs launches with debug logging and prints diagnostics on failure. A second clean from-scratch run is still wanted for the exit. The checklist checks that processes start and stop, not that the picture is correct.
 
 ## M3: Graphics coverage
 
