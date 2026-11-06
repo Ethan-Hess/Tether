@@ -130,7 +130,13 @@ APPLIED_PATCHES=()   # "filename sha256" pairs, in apply order
 
 apply_patches() {
   [[ -f "$PATCH_DIR/series" ]] || die "missing $PATCH_DIR/series"
-  local name patch sha
+  local name patch sha listed
+  listed="$(series_patches)"
+  for patch in "$PATCH_DIR"/*.patch; do
+    [[ -e "$patch" ]] || continue
+    grep -qxF "$(basename "$patch")" <<<"$listed" \
+      || die "$(basename "$patch") is in patches/wine but not listed in series"
+  done
   while IFS= read -r name; do
     patch="$PATCH_DIR/$name"
     [[ -f "$patch" ]] || die "series lists $name but the file does not exist"

@@ -34,13 +34,13 @@ Tether is 1.0 when **all** of these are true:
   - x86_64 Homebrew deps in `/usr/local` (freetype, gnutls, sdl2, gstreamer, molten-vk). See prior art: Gcenx's macOS Wine builds and Whisky's Wine.
   - Upstream Wine plus a patch queue, not a fork ([ADR 0004](docs/adr/0004-upstream-wine-with-patch-queue.md)). Disable unneeded features with configure flags (`--without-x --without-wayland --disable-tests`).
   - First patches: **msync**, macOS driver fixes, and Retina mode, extracted from CodeWeavers' published CrossOver source (LGPL) by diffing against the matching upstream tag. Each patch carries an origin and upstream-status header ([runtime/patches/wine/README.md](runtime/patches/wine/README.md)).
-  - CI checks that every patch in `series` applies cleanly and has a valid header.
+  - `build-wine.sh --prepare-only` checks that every patch in `series` applies cleanly, has a valid header, and that no patch file is missing from `series`. Run it locally before committing a patch (automated CI is deferred).
   - Nightly build against Wine's development branch to spot rebase conflicts early.
 - [ ] **DXMT build** (`build-dxmt.sh`): PE DLLs plus `winemetal.so` built against our Wine tree.
 - [ ] **DXVK build** (`build-dxvk.sh`): pin a DXVK version whose Vulkan feature requirements MoltenVK satisfies, and document the choice in an ADR.
 - [ ] **MoltenVK** (`fetch-moltenvk.sh`): pinned release with a checksum.
 - [ ] **Packaging** (`package-runtime.sh`): `runtime.json`, ad-hoc signing, a `.tar.xz` with SHA-256.
-- [ ] **CI:** GitHub Actions on Apple Silicon macOS runners builds the runtime on tag. Release artifacts include checksums and a minisign signature.
+- [ ] **CI** *(deferred: builds and checks run locally for now)*: GitHub Actions on Apple Silicon macOS runners builds the runtime on tag. Release artifacts include checksums and a minisign signature.
 - [ ] `tether runtime install [version]`: download, verify signature and hash, unpack into `Runtimes/`.
 - [ ] **Smoke test set:** `notepad`, `winecfg`, and a redistributable D3D11 sample (built from Microsoft's open-source DirectX samples), run headless in CI where Metal is available.
 
