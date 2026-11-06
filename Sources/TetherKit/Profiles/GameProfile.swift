@@ -8,6 +8,8 @@ public struct GameProfile: Codable, Hashable, Sendable, Identifiable {
     public var name: String
     /// Executable file names (case-insensitive) used for automatic matching.
     public var executables: [String]
+    /// Steam app IDs this profile applies to (matched before executable names).
+    public var steamAppIDs: [Int]
     /// Backends to try in order. Unavailable ones are skipped.
     public var backendPreference: [GraphicsBackendID]
     public var sync: SyncMode?
@@ -21,6 +23,7 @@ public struct GameProfile: Codable, Hashable, Sendable, Identifiable {
         id: String,
         name: String,
         executables: [String] = [],
+        steamAppIDs: [Int] = [],
         backendPreference: [GraphicsBackendID] = [],
         sync: SyncMode? = nil,
         windowsVersion: WindowsVersion? = nil,
@@ -31,6 +34,7 @@ public struct GameProfile: Codable, Hashable, Sendable, Identifiable {
         self.id = id
         self.name = name
         self.executables = executables
+        self.steamAppIDs = steamAppIDs
         self.backendPreference = backendPreference
         self.sync = sync
         self.windowsVersion = windowsVersion
@@ -44,6 +48,7 @@ public struct GameProfile: Codable, Hashable, Sendable, Identifiable {
         id = try c.decode(String.self, forKey: .id)
         name = try c.decode(String.self, forKey: .name)
         executables = try c.decodeIfPresent([String].self, forKey: .executables) ?? []
+        steamAppIDs = try c.decodeIfPresent([Int].self, forKey: .steamAppIDs) ?? []
         backendPreference = try c.decodeIfPresent([GraphicsBackendID].self, forKey: .backendPreference) ?? []
         sync = try c.decodeIfPresent(SyncMode.self, forKey: .sync)
         windowsVersion = try c.decodeIfPresent(WindowsVersion.self, forKey: .windowsVersion)
@@ -85,6 +90,11 @@ public struct ProfileLibrary: Sendable {
 
     public func profile(id: String) -> GameProfile? {
         profiles.first { $0.id == id }
+    }
+
+    /// Matches by Steam app ID (more reliable than file names: many games share launcher exes).
+    public func match(steamAppID: Int) -> GameProfile? {
+        profiles.first { $0.steamAppIDs.contains(steamAppID) }
     }
 
     /// Matches by executable file name, e.g. `C:\Program Files (x86)\Overwatch\_retail_\Overwatch.exe`.

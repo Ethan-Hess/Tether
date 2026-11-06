@@ -8,13 +8,16 @@ public struct LaunchRequest: Sendable {
     /// Forces a profile; otherwise bottle's profile, then auto-match by executable name.
     public var profileID: String?
     public var debug: Bool
+    /// Steam app ID of the game being launched, if known; matched against profiles before the exe name.
+    public var steamAppID: Int?
 
-    public init(bottle: Bottle, executable: String, arguments: [String] = [], profileID: String? = nil, debug: Bool = false) {
+    public init(bottle: Bottle, executable: String, arguments: [String] = [], profileID: String? = nil, debug: Bool = false, steamAppID: Int? = nil) {
         self.bottle = bottle
         self.executable = executable
         self.arguments = arguments
         self.profileID = profileID
         self.debug = debug
+        self.steamAppID = steamAppID
     }
 }
 
@@ -53,6 +56,7 @@ public struct Launcher: Sendable {
         if let id = request.profileID ?? request.bottle.config.profileID {
             return profiles.profile(id: id)
         }
+        if let appID = request.steamAppID, let match = profiles.match(steamAppID: appID) { return match }
         return profiles.match(executable: request.executable)
     }
 

@@ -6,7 +6,7 @@ struct Tether: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "tether",
         abstract: "Run Windows games on macOS with Wine + Metal.",
-        subcommands: [BottleCommand.self, Run.self, Env.self, RuntimeCommand.self, Backends.self, Profiles.self, Doctor.self]
+        subcommands: [BottleCommand.self, Run.self, Env.self, RuntimeCommand.self, SteamCommand.self, Backends.self, Profiles.self, Doctor.self]
     )
 }
 
@@ -170,6 +170,35 @@ func printPolicyWarnings(_ env: LaunchEnvironment) {
     }
     for k in env.rejectedEnvironmentKeys {
         FileHandle.standardError.write("warning: environment key '\(k)' is protected and was ignored\n".data(using: .utf8)!)
+    }
+}
+
+// MARK: - steam
+
+struct SteamCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "steam",
+        abstract: "Inspect Steam inside a bottle (read-only).",
+        subcommands: [List.self]
+    )
+
+    struct List: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: "List games Steam reports as installed in a bottle.")
+        @Argument var bottle: String
+        @Option(help: "Host path of the Steam folder, if it isn't in C:\\Program Files (x86)\\Steam.")
+        var steamRoot: String?
+
+        func run() throws {
+            let b = try BottleStore().load(name: bottle)
+            let apps = SteamLibrary.installedApps(in: b, steamRoot: steamRoot.map { URL(fileURLWithPath: $0, isDirectory: true) })
+            if apps.isEmpty { print("No installed Steam games found in '\(bottle)'."); return }
+            let profiles = ProfileLibrary.load()
+            for app in apps {
+                let profile = profiles.match(steamAppID: app.appID)?.id ?? "-"
+                let state = app.isFullyInstalled ? "installed" : "incomplete"
+                print("\(app.appID)\t\(app.name)\t\(state)\tprofile=\(profile)\t\(app.installURL.path)")
+            }
+        }
     }
 }
 

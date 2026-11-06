@@ -54,9 +54,9 @@ Tether is 1.0 when **all** of these are true:
 ### Steam
 - [ ] `steam` profile: Steam client in its own bottle, running the Windows `SteamSetup.exe`.
 - [ ] `steamwebhelper` (CEF) works: rendering, GPU and sandbox flags, and login. Track known CrossOver and Proton fixes and upstream what we can.
-- [ ] **Library import:** parse `steamapps/libraryfolders.vdf` and `appmanifest_<appid>.acf` to list installed games with app IDs.
+- [x] **Library import:** parse `steamapps/libraryfolders.vdf` and `appmanifest_<appid>.acf` to list installed games with app IDs (`tether steam list <bottle>`). Tested on synthetic manifests only; still to be checked against a real Steam install.
 - [ ] **Launch by app ID:** `steam.exe -silent` plus `steam://rungameid/<appid>`, so Steamworks DRM, Cloud saves, and achievements work normally.
-- [ ] Per-game profile matching by Steam app ID (add `steamAppIDs` to `GameProfile`).
+- [x] Per-game profile matching by Steam app ID (`steamAppIDs` on `GameProfile`; `LaunchRequest.steamAppID` beats exe-name matching).
 - [ ] Steam Overlay: the overlay is Steam's own in-guest feature, not Tether injection, and is left to the user's Steam settings. Document this distinction in ADR 0003.
 - [ ] Controller pass-through: Steam Input and SDL inside Wine.
 - [ ] *Research:* a bridge from Windows games to the **native macOS Steam client** (similar in spirit to Proton's `lsteamclient`, which targets Linux), so games don't need Windows Steam running inside every bottle. Saves memory and CPU, but it's a large project. Decide go or no-go after M2.
