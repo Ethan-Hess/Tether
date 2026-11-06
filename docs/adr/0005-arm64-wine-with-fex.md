@@ -16,13 +16,15 @@ FEX needs 4K pages while macOS arm64 uses 16K. The community builds solve this w
 - **Target architecture:** native arm64 Wine host, with FEX as the x86 translator (ARM64EC for 64-bit, WoW64 for 32-bit). x86_64-under-Rosetta is dropped as the primary design.
 - **Unchanged from ADR 0004:** upstream Wine at a pinned tag plus a thin, provenance-tagged patch queue, upstream by default.
 - **Minimum macOS** becomes 26.4 for the runtime (the host app can still target an older minimum, but cannot launch games below it).
-- **Runtime source** is decided after the remaining spike items: either wrap pinned, hash-verified community builds, or build Wine and FEX ourselves. Community build scripts are prior art only. Some of their glue is AGPL-3.0, so we do not copy it.
+- **Runtime source: wrap first, build later.** For M1, `tether runtime install` fetches a pinned community build (starting with `athei/wine-build`), verifies its SHA-256 against a value pinned in Tether, and unpacks it unmodified. We do not re-sign or patch it, so its original Developer ID signature and entitlement provisioning profile stay valid and our own entitlement is not on the critical path. Building our own Wine and FEX (and carrying our own patch queue) is deferred until we need changes the community builds will not take, and at that point it requires our own entitlement. Community build scripts are prior art only. Some of their glue is AGPL-3.0, so we do not copy it.
+- **Mitigations for depending on a third-party build:** pin by version and hash; keep the previous runtime installed for rollback; record the source and license links (LGPL for Wine, MIT for FEX) in `runtime.json`; keep a second candidate (MetalSharp-Wine) tested as a fallback; contribute fixes upstream rather than forking.
 - **Build tools** use the user's arm64 Homebrew. No x86_64 prefix is required.
 
 ## Open items before this is Accepted
-1. Confirm the cross-architecture entitlement is available to Tether's own Developer ID team (self-serve capability or a request to Apple).
-2. Run a D3D11 sample through DXMT on the arm64 runtime (not yet done).
-3. Decide wrap-versus-build for the runtime.
+1. Confirm the cross-architecture entitlement is available to Tether's own Developer ID team (self-serve capability or a request to Apple). Needed before we ship our own loader; not needed while we wrap an unmodified community build.
+2. Confirm the community build is notarized and may be redistributed unmodified (the spike checked its Developer ID signature and profile, not notarization or its release licensing).
+
+Closed: the D3D11 sample ran through DXMT on the arm64 runtime (see the spike), and the wrap-versus-build decision is made above.
 
 ## Consequences
 - No dependence on Rosetta, which removes the existential risk in the roadmap. We now depend on FEX and on the entitlement.

@@ -30,7 +30,7 @@ Tether is 1.0 when **all** of these are true:
 **Goal:** `tether run` starts a real D3D11 program and renders through DXMT.
 
 - [ ] **Wine build** (`runtime/scripts/build-wine.sh`)
-  - **Direction changed ([ADR 0005](docs/adr/0005-arm64-wine-with-fex.md), proposed):** native arm64 Wine with FEX (ARM64EC and WoW64) instead of x86_64 under Rosetta. Open items: confirm the cross-architecture entitlement for our team, run a D3D11 sample through DXMT, and decide wrap-versus-build. The bullets below this one still describe the earlier x86_64 plan and will be rewritten once those are settled.
+  - **Direction changed ([ADR 0005](docs/adr/0005-arm64-wine-with-fex.md), proposed):** native arm64 Wine with FEX (ARM64EC and WoW64) instead of x86_64 under Rosetta. The spike ran a D3D11 sample through DXMT on a community arm64 build, and the decision is to wrap a pinned, hash-verified community runtime first and build our own later. Open items: confirm the cross-architecture entitlement for our team (needed only once we ship our own loader) and confirm the community build's notarization and redistribution terms. The bullets below this one still describe the earlier x86_64 plan and will be rewritten once those are settled.
   - Pin an upstream Wine stable tag. Build x86_64 under Rosetta with `--enable-archs=i386,x86_64` (wow64, so there are no 32-bit host binaries).
   - x86_64 Homebrew deps in `/usr/local` (freetype, gnutls, sdl2, gstreamer, molten-vk). See prior art: Gcenx's macOS Wine builds and Whisky's Wine.
   - Upstream Wine plus a patch queue, not a fork ([ADR 0004](docs/adr/0004-upstream-wine-with-patch-queue.md)). Disable unneeded features with configure flags (`--without-x --without-wayland --disable-tests`).
