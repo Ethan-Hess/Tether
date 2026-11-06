@@ -130,7 +130,7 @@ Steam checklist: `scripts/steam-checklist.sh --app <id> --game-process <regex>` 
 
 - [ ] **Embed the pinned runtime in Tether.app** (notarized only if a paid Developer ID is later obtained; until then ad-hoc signed. A stand-in app test showed one Open Anyway approval covers the nested runtime; still to test: a real browser download and a full game launch from the translocated app, see the distribution spike) ([ADR 0005](docs/adr/0005-arm64-wine-with-fex.md), [distribution spike](docs/spikes/distribution.md)). Leave `lib/wine/aarch64-unix/wine.app` untouched (re-signing it loses its provisioning profile); sign the app's other Mach-O files with the hardened runtime. Verify that notarization accepts the nested loader with a real signing identity.
 - [ ] **Developer ID signing and notarization** *(deferred: needs a paid Apple Developer Program membership; decided to ship with the Gatekeeper warning for now)* for the app and any binaries Tether adds. Use the hardened runtime with only the entitlements needed, documented in an ADR.
-- [ ] **Licence notices:** inventory the bundle's third-party libraries and licences, add a notices screen and source links.
+- [ ] **Licence notices:** a first inventory is in [docs/THIRD-PARTY.md](docs/THIRD-PARTY.md) (several rows still unverified); add a notices screen and source links.
 - [ ] **App updates** via Sparkle 2 (EdDSA-signed appcast). Runtime updates ship with app updates (the embedded runtime is pinned by version and hash); a separate runtime download channel is not planned.
 - [ ] **Rollback:** keep the previous runtime and let bottles pin a version.
 - [ ] **Bottle schema migrations** (`schemaVersion` exists; add migrators and tests).
