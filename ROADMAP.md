@@ -8,7 +8,7 @@ Tether is 1.0 when **all** of these are true:
 
 | Area | Bar |
 |------|-----|
-| **Install** | Signed, notarized `.app`. Install via download or Homebrew cask. First run to first game takes under 10 minutes with no Terminal. |
+| **Install** | Downloadable `.app`, ad-hoc signed. Without an Apple Developer ID the first launch needs macOS's "Open Anyway" approval in System Settings (accepted for now; Developer ID signing and notarization are deferred, see M6). Developers can also build from source. First run to first game takes under 10 minutes with no Terminal. |
 | **Launchers** | Steam installs, logs in, updates, and launches games reliably. Epic and Battle.net launchers are not planned. |
 | **Compatibility** | ≥ 50 titles in the compatibility database rated *Gold* or better, including ≥ 10 of Steam's top 100 non-kernel-anti-cheat games. |
 | **Performance** | Within 5% of CrossOver's average FPS on the benchmark set for the same backend, with p99 frame time no worse. Shader stutter only on first encounter of a shader, never after a cache hit. |
@@ -128,8 +128,8 @@ Steam checklist: `scripts/steam-checklist.sh --app <id> --game-process <regex>` 
 
 ## M6: Distribution and trust
 
-- [ ] **Embed the pinned runtime in a notarized Tether.app** ([ADR 0005](docs/adr/0005-arm64-wine-with-fex.md), [distribution spike](docs/spikes/distribution.md)). Leave `lib/wine/aarch64-unix/wine.app` untouched (re-signing it loses its provisioning profile); sign the app's other Mach-O files with the hardened runtime. Verify that notarization accepts the nested loader with a real signing identity.
-- [ ] **Developer ID signing and notarization** for the app and any binaries Tether adds. Use the hardened runtime with only the entitlements needed, documented in an ADR.
+- [ ] **Embed the pinned runtime in Tether.app** (notarized only if a paid Developer ID is later obtained; until then ad-hoc signed, with the nested-quarantine behaviour still to be tested, see the distribution spike) ([ADR 0005](docs/adr/0005-arm64-wine-with-fex.md), [distribution spike](docs/spikes/distribution.md)). Leave `lib/wine/aarch64-unix/wine.app` untouched (re-signing it loses its provisioning profile); sign the app's other Mach-O files with the hardened runtime. Verify that notarization accepts the nested loader with a real signing identity.
+- [ ] **Developer ID signing and notarization** *(deferred: needs a paid Apple Developer Program membership; decided to ship with the Gatekeeper warning for now)* for the app and any binaries Tether adds. Use the hardened runtime with only the entitlements needed, documented in an ADR.
 - [ ] **Licence notices:** inventory the bundle's third-party libraries and licences, add a notices screen and source links.
 - [ ] **App updates** via Sparkle 2 (EdDSA-signed appcast). Runtime updates ship with app updates (the embedded runtime is pinned by version and hash); a separate runtime download channel is not planned.
 - [ ] **Rollback:** keep the previous runtime and let bottles pin a version.

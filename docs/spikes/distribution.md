@@ -49,7 +49,9 @@ exe=Game.exe;d3d9=wined3d;metal_hud=true
 | C. Download, then strip quarantine after hash verification | Technically possible, but it means Tether overriding a Gatekeeper check on unnotarized code. Not recommended without an explicit decision. |
 
 ## Decision
-Option A, confirmed by the project owner: embed the pinned runtime in a notarized Tether.app for 1.0. Keep `tether runtime install` for development and for runtime rollback testing, and have `tether doctor` flag a quarantine attribute on an installed runtime, since the failure is otherwise a confusing dialog.
+Option A, confirmed by the project owner: embed the pinned runtime in Tether.app for 1.0. Notarization is deferred: there is no paid Apple Developer ID, and the owner accepts the Gatekeeper warning (Open Anyway) for now. An ad-hoc signed app needs no Apple account.
+
+**Untested risk of shipping unnotarized:** after the user approves the outer app, the runtime nested inside it still carries its own quarantine attribute, and we saw an unapproved quarantined `wine.app` blocked. Whether approving Tether.app covers nested code is unknown. A stand-in app experiment (below) will answer it before we choose between shipping as is, having the app clear quarantine on its own bundled runtime, or a second approval step. Keep `tether runtime install` for development and for runtime rollback testing, and have `tether doctor` flag a quarantine attribute on an installed runtime, since the failure is otherwise a confusing dialog.
 
 ## Open items
 - Licence and version inventory for the bundle.
