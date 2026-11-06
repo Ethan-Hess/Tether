@@ -110,11 +110,12 @@ public struct Launcher: Sendable {
     /// Prepares the prefix (first-run init, backend DLLs) and starts the process.
     @discardableResult
     public func launch(_ plan: LaunchPlan) throws -> Process {
+        // First, so even the first-run prefix setup finds the file the environment points at.
+        try writeCompatRules(plan)
         if !isPrefixInitialized(plan.bottle) {
             try initializePrefix(plan.bottle, runtime: plan.runtime, environment: plan.environment)
         }
         try installer.install(backend: plan.environment.backend, runtime: plan.runtime, bottle: plan.bottle)
-        try writeCompatRules(plan)
 
         let process = makeProcess(
             executable: plan.executableURL,
