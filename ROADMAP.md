@@ -71,6 +71,8 @@ Tether is 1.0 when **all** of these are true:
 
 **Exit:** Steam and Battle.net pass a scripted checklist (install → login → install game → launch → quit → relaunch) on two macOS versions.
 
+Steam checklist: `scripts/steam-checklist.sh --app <id> --game-process <regex>` (login and game install are done by a person; it verifies the result and writes a report). So far it has run once, non-interactively, against an existing bottle on macOS 26.6.2 (9 passed, 0 failed, 2 skipped: install and bottle creation). A from-scratch run and a second macOS version are still needed, and it checks that processes start and stop, not that the picture is correct. The Battle.net checklist doesn't exist yet.
+
 ## M3: Graphics coverage
 
 **Goal:** every common Windows graphics API has a working path.
