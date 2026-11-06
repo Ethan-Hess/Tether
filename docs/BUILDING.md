@@ -29,4 +29,6 @@ runtime/scripts/package-runtime.sh # assemble Runtimes/<version>/ + runtime.json
 runtime/scripts/import-gptk.sh     # optional: import D3DMetal from your own GPTK download
 ```
 
-`build-wine.sh` is implemented and needs x86_64 Homebrew in `/usr/local` (`arch -x86_64 /usr/local/bin/brew install bison flex pkg-config freetype gnutls sdl2 gstreamer molten-vk mingw-w64`). The other runtime scripts are still **stubs** that document their steps and exit. Making them real is the top roadmap item.
+> **Note:** the runtime is moving to native arm64 Wine + FEX ([ADR 0005](adr/0005-arm64-wine-with-fex.md)). The official Homebrew installer no longer supports an x86_64 prefix, so the x86_64 instructions below cannot be followed on a fresh machine. `build-wine.sh` will be reworked for arm64.
+
+`build-wine.sh` is implemented (for the earlier x86_64 design) and needs x86_64 Homebrew in `/usr/local` (`arch -x86_64 /usr/local/bin/brew install bison flex pkg-config freetype gnutls sdl2 gstreamer molten-vk mingw-w64`). The other runtime scripts are still **stubs** that document their steps and exit. Making them real is the top roadmap item.

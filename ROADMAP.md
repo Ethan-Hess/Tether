@@ -30,6 +30,7 @@ Tether is 1.0 when **all** of these are true:
 **Goal:** `tether run` starts a real D3D11 program and renders through DXMT.
 
 - [ ] **Wine build** (`runtime/scripts/build-wine.sh`)
+  - **Direction changed ([ADR 0005](docs/adr/0005-arm64-wine-with-fex.md), proposed):** native arm64 Wine with FEX (ARM64EC and WoW64) instead of x86_64 under Rosetta. Open items: confirm the cross-architecture entitlement for our team, run a D3D11 sample through DXMT, and decide wrap-versus-build. The bullets below this one still describe the earlier x86_64 plan and will be rewritten once those are settled.
   - Pin an upstream Wine stable tag. Build x86_64 under Rosetta with `--enable-archs=i386,x86_64` (wow64, so there are no 32-bit host binaries).
   - x86_64 Homebrew deps in `/usr/local` (freetype, gnutls, sdl2, gstreamer, molten-vk). See prior art: Gcenx's macOS Wine builds and Whisky's Wine.
   - Upstream Wine plus a patch queue, not a fork ([ADR 0004](docs/adr/0004-upstream-wine-with-patch-queue.md)). Disable unneeded features with configure flags (`--without-x --without-wayland --disable-tests`).
@@ -171,7 +172,7 @@ Tether is 1.0 when **all** of these are true:
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| **Rosetta 2 phase-out.** Apple has said full Rosetta will be available through macOS 27, with only a subset kept for older games after that. | Existential for the x86_64-Wine design | Track what Apple's game subset covers. Start a research spike on **Wine ARM64EC + an x86 emulator (e.g. FEX)**, where Wine runs natively on arm64 and only Windows x86 code is emulated. This is likely the long-term architecture. |
+| **Rosetta 2 phase-out.** Apple has said full Rosetta will be available through macOS 27, with only a subset kept for older games after that. | Existential for the x86_64-Wine design | Mitigated by moving to **native arm64 Wine + FEX (ARM64EC)** ([ADR 0005](docs/adr/0005-arm64-wine-with-fex.md), [spike](docs/spikes/arm64-fex.md)). New risks: dependence on FEX and on Apple's cross-architecture entitlement (availability for our team unconfirmed), macOS 26.4+ floor. |
 | D3DMetal license or availability changes | Weaker D3D12 support | Keep vkd3d-proton → MoltenVK viable. Contribute to DXMT D3D12 efforts if they emerge. |
 | MoltenVK feature gaps (geometry shaders, transform feedback, etc.) | DXVK and vkd3d-proton titles break | Prefer Metal-native backends. Report gaps upstream. |
 | Steam client (CEF) breakage after Steam updates | Steam unusable until fixed | Nightly Steam smoke test. Fast runtime patch releases. |

@@ -1,5 +1,7 @@
 # Tether runtime
 
+> **Direction change:** the runtime is moving from x86_64-under-Rosetta to native arm64 Wine + FEX ([ADR 0005](../docs/adr/0005-arm64-wine-with-fex.md)). The layout, component table and `build-wine.sh` below still describe the earlier x86_64 design (the arm64 layout uses `lib/wine/aarch64-unix` and a signed `wine.app` loader) and will be updated in the runtime-pipeline phase.
+
 The runtime is everything that runs *inside* a bottle: Wine plus the DirectX translation backends. It's built here, versioned independently of the app, and installed to:
 
 ```
