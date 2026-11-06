@@ -9,7 +9,7 @@ Tether is 1.0 when **all** of these are true:
 | Area | Bar |
 |------|-----|
 | **Install** | Signed, notarized `.app`. Install via download or Homebrew cask. First run to first game takes under 10 minutes with no Terminal. |
-| **Launchers** | Steam and Battle.net install, log in, update, and launch games reliably. Epic is best effort. |
+| **Launchers** | Steam installs, logs in, updates, and launches games reliably. Epic and Battle.net launchers are not planned. |
 | **Compatibility** | ≥ 50 titles in the compatibility database rated *Gold* or better, including ≥ 10 of Steam's top 100 non-kernel-anti-cheat games. |
 | **Performance** | Within 5% of CrossOver's average FPS on the benchmark set for the same backend, with p99 frame time no worse. Shader stutter only on first encounter of a shader, never after a cache hit. |
 | **Overhead** | Tether's own processes use ~0% CPU while a game runs. No helper daemons. The app can be quit while games keep running. |
@@ -47,7 +47,7 @@ Tether is 1.0 when **all** of these are true:
 
 **Exit:** a fresh Mac runs `tether runtime install && tether bottle create t && tether run t d3d11-sample.exe`, and the sample renders through DXMT. `tether env` shows `WINEMSYNC=1`.
 
-## M2: Launchers (Steam and Battle.net)
+## M2: Launchers (Steam)
 
 **Goal:** install a launcher, log in, install a game, play.
 
@@ -57,21 +57,20 @@ Tether is 1.0 when **all** of these are true:
 - [x] **Library import:** parse `steamapps/libraryfolders.vdf` and `appmanifest_<appid>.acf` to list installed games with app IDs (`tether steam list <bottle>`). Tested on synthetic manifests only; still to be checked against a real Steam install.
 - [x] **Launch by app ID:** `tether steam launch <bottle> <appid>` runs Steam.exe with `steam://rungameid/<appid>`, so Steamworks DRM, Cloud saves, and achievements work normally. Checked on one game (There Are No Orcs, Unity, D3D11) from a cold start on the wrapped arm64 runtime: Steam started and the game ran and looked fine in a manual check. Not yet applied: the game's own profile (its env and launch arguments), `-silent`, and Cloud saves or achievements were not tested.
 - [x] Per-game profile matching by Steam app ID (`steamAppIDs` on `GameProfile`; `LaunchRequest.steamAppID` beats exe-name matching).
+- [ ] **Overwatch 2** (Steam app 2357570) tested on DXMT, installed and launched through Steam. Untested so far; also check whether the Steam version needs the Battle.net app or only an account login. Fill in the per-game notes in `docs/ANTICHEAT.md`.
 - [ ] Steam Overlay: the overlay is Steam's own in-guest feature, not Tether injection, and is left to the user's Steam settings. Document this distinction in ADR 0003.
 - [ ] Controller pass-through: Steam Input and SDL inside Wine.
 - [ ] *Research:* a bridge from Windows games to the **native macOS Steam client** (similar in spirit to Proton's `lsteamclient`, which targets Linux), so games don't need Windows Steam running inside every bottle. Saves memory and CPU, but it's a large project. Decide go or no-go after M2.
 
-### Battle.net
-- [ ] `battlenet` profile validated end to end: install, login, game install and patching, launch.
-- [ ] Overwatch 2 tested on DXMT. Fill in the per-game notes in `docs/ANTICHEAT.md`.
+Battle.net as a launcher is out of scope (decided); games from Blizzard, such as Overwatch 2, are handled through Steam.
 
 ### Shared
 - [ ] Profile matching by launcher-provided IDs, not only exe names.
 - [ ] Launch-parameter passthrough (per-game args stored in the bottle). Per-profile `launchArguments` exist; per-bottle storage does not yet.
 
-**Exit:** Steam and Battle.net pass a scripted checklist (install → login → install game → launch → quit → relaunch) on a supported macOS version.
+**Exit:** Steam passes a scripted checklist (install → login → install game → launch → quit → relaunch) on a supported macOS version.
 
-Steam checklist: `scripts/steam-checklist.sh --app <id> --game-process <regex>` (login and game install are done by a person; it verifies the result and writes a report). So far it has run once, non-interactively, against an existing bottle on macOS 26.6.2 (9 passed, 0 failed, 2 skipped: install and bottle creation). A from-scratch run is still needed, and it checks that processes start and stop, not that the picture is correct. The Battle.net checklist doesn't exist yet.
+Steam checklist: `scripts/steam-checklist.sh --app <id> --game-process <regex>` (login and game install are done by a person; it verifies the result and writes a report). So far it has run once, non-interactively, against an existing bottle on macOS 26.6.2 (9 passed, 0 failed, 2 skipped: install and bottle creation). A from-scratch run is still needed, and it checks that processes start and stop, not that the picture is correct.
 
 ## M3: Graphics coverage
 
@@ -117,7 +116,7 @@ Steam checklist: `scripts/steam-checklist.sh --app <id> --game-process <regex>` 
 - [ ] **First run:** system check (Rosetta install prompt), runtime download, optional GPTK import.
 - [ ] **Library view:** games across bottles, with artwork (Steam app ID lookup), play buttons, and last-played times.
 - [ ] Run an executable or installer from the app (NSOpenPanel and drag-and-drop onto the window or Dock icon).
-- [ ] **One-click launcher setup:** "Install Steam" or "Install Battle.net" creates the bottle, downloads the official installer, and runs it.
+- [ ] **One-click launcher setup:** "Install Steam" creates the bottle, downloads the official installer, and runs it.
 - [ ] **Shortcuts:** generate small `.app` launchers in `~/Applications/Tether Games` for Dock, Spotlight, and Launchpad.
 - [ ] **Bottle tools:** open C: drive in Finder, kill all processes, winecfg, registry editor, reset prefix, duplicate bottle, export and import.
 - [ ] **Logs:** a per-launch log viewer, a "Run with debug logging" toggle, and "Copy diagnostics for a bug report."

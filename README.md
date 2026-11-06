@@ -2,7 +2,7 @@
 
 **Run Windows games on Apple Silicon Macs. Open source, low overhead, and no tricks.**
 
-Tether is an open-source alternative to CrossOver for macOS. It pairs a native Swift/SwiftUI app with a curated [Wine](https://www.winehq.org/) runtime and Metal-native DirectX translation, so you can run Windows games and launchers like Battle.net in isolated "bottles."
+Tether is an open-source alternative to CrossOver for macOS. It pairs a native Swift/SwiftUI app with a curated [Wine](https://www.winehq.org/) runtime and Metal-native DirectX translation, so you can run Windows games, and the Steam launcher, in isolated "bottles."
 
 > [!WARNING]
 > **Pre-alpha.** The app, CLI, bottle management, and launch pipeline are scaffolded and tested, but there is no prebuilt Wine runtime yet, so it can't run games out of the box. See [Roadmap](#roadmap).
@@ -50,16 +50,20 @@ swift build
 ./scripts/test.sh             # runs the test suite (works with the CLT or Xcode)
 
 swift run tether doctor       # check this Mac
-swift run tether bottle create Battle.net --profile battlenet
+swift run tether runtime install   # pinned arm64 runtime (needs macOS 26.4+)
+swift run tether bottle create steam
 swift run tether bottle list
 swift run TetherApp           # SwiftUI app
 ```
 
-Once a runtime is installed (see [runtime/README.md](runtime/README.md)):
+Install Steam into the bottle and launch a game (Steam's installer is Valve's `SteamSetup.exe`, downloaded separately):
 
 ```sh
-swift run tether run Battle.net ~/Downloads/Battle.net-Setup.exe
-swift run tether env Battle.net 'C:\Program Files (x86)\Overwatch\_retail_\Overwatch.exe'   # inspect the exact launch env
+swift run tether run --wait steam ~/Downloads/SteamSetup.exe /S
+swift run tether run steam 'C:\Program Files (x86)\Steam\Steam.exe'   # log in, install a game
+swift run tether steam list steam                                     # installed games and app IDs
+swift run tether steam launch steam <appid>
+swift run tether env steam 'C:\Program Files (x86)\Steam\Steam.exe'   # inspect the exact launch env
 ```
 
 Set `TETHER_HOME=/some/dir` to keep bottles and runtimes somewhere other than `~/Library/Application Support/Tether`.
@@ -73,6 +77,7 @@ Profiles are small JSON files that choose a backend order, sync mode, Windows ve
   "id": "overwatch",
   "name": "Overwatch 2",
   "executables": ["Overwatch.exe"],
+  "steamAppIDs": [2357570],
   "backendPreference": ["dxmt", "d3dmetal", "dxvk"],
   "sync": "msync",
   "windowsVersion": "win10"
@@ -83,8 +88,8 @@ Profiles can't override arbitrary DLLs or set injection-capable variables (`DYLD
 
 | Game / app  | Profile     | Status      |
 |-------------|-------------|-------------|
-| Battle.net  | `battlenet` | Untested    |
-| Overwatch 2 | `overwatch` | Untested    |
+| Steam       | `steam`     | Installs, logs in and launches a game in one manual test (macOS 26.6.2) |
+| Overwatch 2 | `overwatch` | Untested (via Steam) |
 
 ## Anti-cheat
 
@@ -96,7 +101,7 @@ The full plan, with 1.0 exit criteria and risks, is in **[ROADMAP.md](ROADMAP.md
 
 - [x] **M0 Foundations:** TetherKit, CLI, app skeleton, launch policy
 - [ ] **M1 First light:** reproducible Wine + DXMT/DXVK runtime, built in CI
-- [ ] **M2 Launchers:** Steam and Battle.net end to end
+- [ ] **M2 Launchers:** Steam end to end
 - [ ] **M3 Graphics coverage:** D3D9 through D3D12, Vulkan, OpenGL
 - [ ] **M4 Performance:** `tether bench`, msync, shader caches, input latency
 - [ ] **M5 Product UX:** library, one-click launcher setup, shortcuts

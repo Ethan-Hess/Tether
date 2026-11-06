@@ -17,7 +17,7 @@ These are hard project rules. PRs that add any of them will be closed.
 ## What Tether does instead
 
 - **Clean prefixes.** We recommend one bottle per game or launcher, with no leftover tools or DLLs from other software.
-- **Unmodified installs.** Games are installed and updated by their own launchers (for example Battle.net).
+- **Unmodified installs.** Games are installed and updated by their own launcher (Steam).
 - **Minimal process surface.** The game process contains Wine and the selected graphics backend, and nothing else.
 - **Enforced in code.** `OverridePolicy` only allows translation-surface DLL overrides (Direct3D, DXGI, shader compilers, XAudio). `LaunchEnvironment` drops `DYLD_*` and Wine-owned variables from profiles, bottles, and the host shell. Both are covered by tests.
 - **Performance overlays are backend-native only:** the Metal Performance HUD (`MTL_HUD_ENABLED`) or `DXVK_HUD`. These are drawn by the translation layer, not injected.
@@ -30,8 +30,9 @@ These are hard project rules. PRs that add any of them will be closed.
 
 ## Per-game notes
 
-### Overwatch 2 (Battle.net)
+### Overwatch 2 (via Steam)
 
-- Use a dedicated bottle created with the `battlenet` profile. Install Battle.net there, then install Overwatch through it. The `overwatch` profile is matched automatically by executable name.
-- Default backend order is `dxmt → d3dmetal → dxvk`. Overwatch defaults to D3D11, so DXMT is the shortest path to Metal.
+- Use the Steam bottle: install Overwatch 2 (Steam app 2357570) through Steam and launch it with `tether steam launch <bottle> 2357570`. The `overwatch` profile is matched by Steam app ID or executable name.
+- Open question: whether the Steam version needs the Battle.net app installed or only a Battle.net account login. Not yet checked.
+- Default backend order is `dxmt → d3dmetal → dxvk`. Overwatch defaults to D3D11, so DXMT is the shortest path to Metal. The wrapped arm64 runtime currently chooses its own backend per game.
 - Status: **untested**. Results will be recorded here.

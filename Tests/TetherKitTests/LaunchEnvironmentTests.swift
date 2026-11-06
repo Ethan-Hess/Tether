@@ -80,7 +80,9 @@ import Testing
         let lib = ProfileLibrary.load(paths: home.paths)
         #expect(lib.profile(id: "overwatch") != nil)
         #expect(lib.match(executable: #"C:\Program Files (x86)\Overwatch\_retail_\Overwatch.exe"#)?.id == "overwatch")
-        #expect(lib.match(executable: "/Users/x/Battle.net Launcher.exe")?.id == "battlenet")
+        #expect(lib.match(steamAppID: 2357570)?.id == "overwatch")
+        #expect(lib.profile(id: "steam") != nil)
+        #expect(lib.profile(id: "battlenet") == nil, "Battle.net is out of scope")
     }
 
     @Test func backendInstallPlan() {
