@@ -179,8 +179,34 @@ struct SteamCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "steam",
         abstract: "Inspect Steam inside a bottle (read-only).",
-        subcommands: [List.self]
+        subcommands: [List.self, Launch.self]
     )
+
+    struct Launch: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: "Launch an installed game through Steam (steam://rungameid/<appid>).")
+        @Argument var bottle: String
+        @Argument(help: "Steam app ID (see `tether steam list`).") var appID: Int
+        @Flag(help: "Enable Wine/backend logging to the bottle's logs/wine.log.") var debug = false
+
+        func run() throws {
+            let b = try BottleStore().load(name: bottle)
+            let steamExe = b.driveC.appendingPathComponent(SteamLibrary.defaultRootInBottle + "/Steam.exe")
+            guard FileManager.default.fileExists(atPath: steamExe.path) else {
+                throw ValidationError("Steam isn't installed in '\(bottle)' (no \(SteamLibrary.defaultExecutableInBottle)).")
+            }
+            guard let url = SteamLibrary.runGameURL(appID: appID) else { throw ValidationError("Invalid app ID \(appID).") }
+            let installed = SteamLibrary.installedApps(in: b).first { $0.appID == appID }
+            if installed == nil {
+                FileHandle.standardError.write("warning: app \(appID) isn't listed as installed in '\(bottle)'; Steam may open its store page instead.\n".data(using: .utf8)!)
+            }
+            // The Steam profile (matched by Steam.exe) applies; the game itself is started by Steam.
+            let launcher = Launcher()
+            let plan = try launcher.plan(LaunchRequest(bottle: b, executable: SteamLibrary.defaultExecutableInBottle, arguments: [url], debug: debug))
+            printBackendNotice(plan)
+            let process = try launcher.launch(plan)
+            print("Asked Steam to launch \(installed?.name ?? "app \(appID)") (pid \(process.processIdentifier))")
+        }
+    }
 
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: "List games Steam reports as installed in a bottle.")

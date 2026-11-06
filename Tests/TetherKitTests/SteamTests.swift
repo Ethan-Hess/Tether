@@ -255,3 +255,17 @@ import Testing
         #expect(steam.launchArguments == ["-cef-disable-gpu"])
     }
 }
+
+@Suite struct SteamLaunchTests {
+    @Test func runGameURL() {
+        #expect(SteamLibrary.runGameURL(appID: 3480990) == "steam://rungameid/3480990")
+        #expect(SteamLibrary.runGameURL(appID: 0) == nil)
+        #expect(SteamLibrary.runGameURL(appID: -1) == nil)
+    }
+
+    @Test func defaultExecutablePathMatchesSteamProfile() throws {
+        let home = TempHome()
+        let match = ProfileLibrary.load(paths: home.paths).match(executable: SteamLibrary.defaultExecutableInBottle)
+        #expect(match?.id == "steam")
+    }
+}

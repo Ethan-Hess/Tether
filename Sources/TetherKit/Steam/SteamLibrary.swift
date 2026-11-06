@@ -41,6 +41,15 @@ public enum SteamLibrary {
     /// Largest manifest or library file we will read. Real files are far smaller.
     static let maxFileSize = 8 * 1024 * 1024
 
+    /// Windows path of the Steam client inside a bottle.
+    public static let defaultExecutableInBottle = "C:\\Program Files (x86)\\Steam\\Steam.exe"
+
+    /// The URL that asks a running (or starting) Steam to launch a game, so Steamworks DRM,
+    /// Cloud saves and achievements all work as they do on Windows.
+    public static func runGameURL(appID: Int) -> String? {
+        appID > 0 ? "steam://rungameid/\(appID)" : nil
+    }
+
     // MARK: parsing
 
     /// Library folder paths exactly as written in `libraryfolders.vdf` (usually Windows paths).

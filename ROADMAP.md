@@ -52,10 +52,10 @@ Tether is 1.0 when **all** of these are true:
 **Goal:** install a launcher, log in, install a game, play.
 
 ### Steam
-- [ ] `steam` profile: Steam client in its own bottle, running the Windows `SteamSetup.exe`.
+- [x] `steam` profile: Steam client in its own bottle, running the Windows `SteamSetup.exe` (`/S` silent install works; installing it from the app is still an M5 item).
 - [x] `steamwebhelper` (CEF) works: rendering, GPU and sandbox flags, and login. Track known CrossOver and Proton fixes and upstream what we can. Manual test on the wrapped arm64 runtime (wine 11.19): login and page switching work with `-cef-disable-gpu` (now in the `steam` profile's `launchArguments`); without it the window went blank after switching pages. Not yet tested: long sessions, installing or launching a game, Steam Guard, and whether sandbox flags matter.
 - [x] **Library import:** parse `steamapps/libraryfolders.vdf` and `appmanifest_<appid>.acf` to list installed games with app IDs (`tether steam list <bottle>`). Tested on synthetic manifests only; still to be checked against a real Steam install.
-- [ ] **Launch by app ID:** `steam.exe -silent` plus `steam://rungameid/<appid>`, so Steamworks DRM, Cloud saves, and achievements work normally.
+- [x] **Launch by app ID:** `tether steam launch <bottle> <appid>` runs Steam.exe with `steam://rungameid/<appid>`, so Steamworks DRM, Cloud saves, and achievements work normally. Checked on one game (There Are No Orcs, Unity, D3D11) from a cold start on the wrapped arm64 runtime: Steam started and the game ran and looked fine in a manual check. Not yet applied: the game's own profile (its env and launch arguments), `-silent`, and Cloud saves or achievements were not tested.
 - [x] Per-game profile matching by Steam app ID (`steamAppIDs` on `GameProfile`; `LaunchRequest.steamAppID` beats exe-name matching).
 - [ ] Steam Overlay: the overlay is Steam's own in-guest feature, not Tether injection, and is left to the user's Steam settings. Document this distinction in ADR 0003.
 - [ ] Controller pass-through: Steam Input and SDL inside Wine.
