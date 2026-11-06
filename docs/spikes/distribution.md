@@ -51,7 +51,14 @@ exe=Game.exe;d3d9=wined3d;metal_hud=true
 ## Decision
 Option A, confirmed by the project owner: embed the pinned runtime in Tether.app for 1.0. Notarization is deferred: there is no paid Apple Developer ID, and the owner accepts the Gatekeeper warning (Open Anyway) for now. An ad-hoc signed app needs no Apple account.
 
-**Untested risk of shipping unnotarized:** after the user approves the outer app, the runtime nested inside it still carries its own quarantine attribute, and we saw an unapproved quarantined `wine.app` blocked. Whether approving Tether.app covers nested code is unknown. A stand-in app experiment (below) will answer it before we choose between shipping as is, having the app clear quarantine on its own bundled runtime, or a second approval step. Keep `tether runtime install` for development and for runtime rollback testing, and have `tether doctor` flag a quarantine attribute on an installed runtime, since the failure is otherwise a confusing dialog.
+**Risk of shipping unnotarized, now tested:** the runtime nested inside the app carries its own quarantine attribute, and an unapproved quarantined `wine.app` is blocked. The stand-in app experiment below shows that approving the outer app also covers the nested runtime.
+
+### Stand-in app experiment (2026-11-05, macOS 26.6.2)
+- **Setup:** an ad-hoc signed `Standin.app` embedding a copy of the runtime under `Contents/Resources/runtime`. I signed the outer app only (no `--deep`), and checked that the nested `wine.app` kept its upstream Developer ID signature. I set `com.apple.quarantine` (`0081`) on every file in the tree, as an extracted download would have. The app spawns the embedded `bin/wine --version` and records the outcome.
+- **Steps:** double-click, which showed "Apple could not verify 'Standin.app' is free of malware"; then System Settings, Privacy & Security, Open Anyway.
+- **Result:** wine ran (`wine-11.19-17-ge2e42653b41`, exit 0) with no second prompt. The app ran from an App Translocation path (`/private/var/folders/…/AppTranslocation/…/Standin.app`). Afterwards both the outer app and the nested `wine.app` still had the quarantine attribute, with its flags changed from `0081` to `00c1`, i.e. the user-approved bit was set on the nested runtime too.
+- **Conclusion:** shipping an unnotarized, ad-hoc signed Tether.app with the runtime embedded works with one "Open Anyway" approval, and no workaround for the nested runtime is needed.
+- **Not tested:** a real browser-downloaded zip or dmg (I set the attribute by hand on every file), moving the app to /Applications, running a game rather than `wine --version` from the translocated read-only location, and other macOS versions or Macs. Keep `tether runtime install` for development and for runtime rollback testing, and have `tether doctor` flag a quarantine attribute on an installed runtime, since the failure is otherwise a confusing dialog.
 
 ## Open items
 - Licence and version inventory for the bundle.
