@@ -57,7 +57,7 @@ public struct BottleConfig: Codable, Hashable, Sendable {
 
 /// A bottle is an isolated Wine prefix plus its Tether configuration.
 ///
-/// One game (or one launcher, e.g. Battle.net) per bottle is recommended: it keeps the
+/// One game (or one launcher, e.g. Steam) per bottle is recommended: it keeps the
 /// prefix clean, which is both faster and the least surprising environment for anti-cheat.
 public struct Bottle: Identifiable, Hashable, Sendable {
     public var id: String { name }

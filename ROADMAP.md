@@ -8,8 +8,8 @@ Tether is 1.0 when **all** of these are true:
 
 | Area | Bar |
 |------|-----|
-| **Install** | Signed, notarized `.app`. Install via download or Homebrew cask. First run to first game takes under 10 minutes with no Terminal. |
-| **Launchers** | Steam and Battle.net install, log in, update, and launch games reliably. Epic is best effort. |
+| **Install** | Downloadable `.app`, ad-hoc signed. Without an Apple Developer ID the first launch needs macOS's "Open Anyway" approval in System Settings (accepted for now; Developer ID signing and notarization are deferred, see M6). Developers can also build from source. First run to first game takes under 10 minutes with no Terminal. |
+| **Launchers** | Steam installs, logs in, updates, and launches games reliably. Epic and Battle.net launchers are not planned. |
 | **Compatibility** | ≥ 50 titles in the compatibility database rated *Gold* or better, including ≥ 10 of Steam's top 100 non-kernel-anti-cheat games. |
 | **Performance** | Within 5% of CrossOver's average FPS on the benchmark set for the same backend, with p99 frame time no worse. Shader stutter only on first encounter of a shader, never after a cache hit. |
 | **Overhead** | Tether's own processes use ~0% CPU while a game runs. No helper daemons. The app can be quit while games keep running. |
@@ -42,12 +42,12 @@ Tether is 1.0 when **all** of these are true:
 - [ ] **MoltenVK** (`fetch-moltenvk.sh`): pinned release with a checksum.
 - [ ] **Packaging** (`package-runtime.sh`): `runtime.json`, ad-hoc signing, a `.tar.xz` with SHA-256.
 - [ ] **CI** *(deferred: builds and checks run locally for now)*: GitHub Actions on Apple Silicon macOS runners builds the runtime on tag. Release artifacts include checksums and a minisign signature.
-- [ ] `tether runtime install [version]`: download, verify signature and hash, unpack into `Runtimes/`.
+- [x] `tether runtime install [version]`: download, verify the pinned hash, unpack into `Runtimes/`. For development and rollback testing; 1.0 embeds the runtime in the notarized app (M6). The installed runtime must not be quarantined (`tether doctor` checks).
 - [ ] **Smoke test set:** `notepad`, `winecfg`, and a redistributable D3D11 sample (built from Microsoft's open-source DirectX samples), run headless in CI where Metal is available.
 
 **Exit:** a fresh Mac runs `tether runtime install && tether bottle create t && tether run t d3d11-sample.exe`, and the sample renders through DXMT. `tether env` shows `WINEMSYNC=1`.
 
-## M2: Launchers (Steam and Battle.net)
+## M2: Launchers (Steam)
 
 **Goal:** install a launcher, log in, install a game, play.
 
@@ -57,21 +57,20 @@ Tether is 1.0 when **all** of these are true:
 - [x] **Library import:** parse `steamapps/libraryfolders.vdf` and `appmanifest_<appid>.acf` to list installed games with app IDs (`tether steam list <bottle>`). Tested on synthetic manifests only; still to be checked against a real Steam install.
 - [x] **Launch by app ID:** `tether steam launch <bottle> <appid>` runs Steam.exe with `steam://rungameid/<appid>`, so Steamworks DRM, Cloud saves, and achievements work normally. Checked on one game (There Are No Orcs, Unity, D3D11) from a cold start on the wrapped arm64 runtime: Steam started and the game ran and looked fine in a manual check. Not yet applied: the game's own profile (its env and launch arguments), `-silent`, and Cloud saves or achievements were not tested.
 - [x] Per-game profile matching by Steam app ID (`steamAppIDs` on `GameProfile`; `LaunchRequest.steamAppID` beats exe-name matching).
+- [ ] **Overwatch 2** (Steam app 2357570) tested on DXMT, installed and launched through Steam. Untested so far; also check whether the Steam version needs the Battle.net app or only an account login. Fill in the per-game notes in `docs/ANTICHEAT.md`.
 - [ ] Steam Overlay: the overlay is Steam's own in-guest feature, not Tether injection, and is left to the user's Steam settings. Document this distinction in ADR 0003.
 - [ ] Controller pass-through: Steam Input and SDL inside Wine.
 - [ ] *Research:* a bridge from Windows games to the **native macOS Steam client** (similar in spirit to Proton's `lsteamclient`, which targets Linux), so games don't need Windows Steam running inside every bottle. Saves memory and CPU, but it's a large project. Decide go or no-go after M2.
 
-### Battle.net
-- [ ] `battlenet` profile validated end to end: install, login, game install and patching, launch.
-- [ ] Overwatch 2 tested on DXMT. Fill in the per-game notes in `docs/ANTICHEAT.md`.
+Battle.net as a launcher is out of scope (decided); games from Blizzard, such as Overwatch 2, are handled through Steam.
 
 ### Shared
 - [ ] Profile matching by launcher-provided IDs, not only exe names.
 - [ ] Launch-parameter passthrough (per-game args stored in the bottle). Per-profile `launchArguments` exist; per-bottle storage does not yet.
 
-**Exit:** Steam and Battle.net pass a scripted checklist (install → login → install game → launch → quit → relaunch) on two macOS versions.
+**Exit:** Steam passes a scripted checklist (install → login → install game → launch → quit → relaunch) on a supported macOS version.
 
-Steam checklist: `scripts/steam-checklist.sh --app <id> --game-process <regex>` (login and game install are done by a person; it verifies the result and writes a report). So far it has run once, non-interactively, against an existing bottle on macOS 26.6.2 (9 passed, 0 failed, 2 skipped: install and bottle creation). A from-scratch run and a second macOS version are still needed, and it checks that processes start and stop, not that the picture is correct. The Battle.net checklist doesn't exist yet.
+Steam checklist: `scripts/steam-checklist.sh --app <id> --game-process <regex>` (login and game install are done by a person; it verifies the result and writes a report). So far it has run once, non-interactively, against an existing bottle on macOS 26.6.2 (9 passed, 0 failed, 2 skipped: install and bottle creation). A from-scratch run is still needed, and it checks that processes start and stop, not that the picture is correct.
 
 ## M3: Graphics coverage
 
@@ -117,7 +116,7 @@ Steam checklist: `scripts/steam-checklist.sh --app <id> --game-process <regex>` 
 - [ ] **First run:** system check (Rosetta install prompt), runtime download, optional GPTK import.
 - [ ] **Library view:** games across bottles, with artwork (Steam app ID lookup), play buttons, and last-played times.
 - [ ] Run an executable or installer from the app (NSOpenPanel and drag-and-drop onto the window or Dock icon).
-- [ ] **One-click launcher setup:** "Install Steam" or "Install Battle.net" creates the bottle, downloads the official installer, and runs it.
+- [ ] **One-click launcher setup:** "Install Steam" creates the bottle, downloads the official installer, and runs it.
 - [ ] **Shortcuts:** generate small `.app` launchers in `~/Applications/Tether Games` for Dock, Spotlight, and Launchpad.
 - [ ] **Bottle tools:** open C: drive in Finder, kill all processes, winecfg, registry editor, reset prefix, duplicate bottle, export and import.
 - [ ] **Logs:** a per-launch log viewer, a "Run with debug logging" toggle, and "Copy diagnostics for a bug report."
@@ -129,8 +128,10 @@ Steam checklist: `scripts/steam-checklist.sh --app <id> --game-process <regex>` 
 
 ## M6: Distribution and trust
 
-- [ ] **Developer ID signing and notarization** for the app and runtime binaries. Use the hardened runtime with only the entitlements Wine needs (unsigned executable memory, disabled library validation for runtime dylibs), documented in an ADR.
-- [ ] **App updates** via Sparkle 2 (EdDSA-signed appcast). Runtime updates via the signed manifest from M1.
+- [ ] **Embed the pinned runtime in Tether.app** (notarized only if a paid Developer ID is later obtained; until then ad-hoc signed. A stand-in app test showed one Open Anyway approval covers the nested runtime; still to test: a real browser download and a full game launch from the translocated app, see the distribution spike) ([ADR 0005](docs/adr/0005-arm64-wine-with-fex.md), [distribution spike](docs/spikes/distribution.md)). Leave `lib/wine/aarch64-unix/wine.app` untouched (re-signing it loses its provisioning profile); sign the app's other Mach-O files with the hardened runtime. Verify that notarization accepts the nested loader with a real signing identity.
+- [ ] **Developer ID signing and notarization** *(deferred: needs a paid Apple Developer Program membership; decided to ship with the Gatekeeper warning for now)* for the app and any binaries Tether adds. Use the hardened runtime with only the entitlements needed, documented in an ADR.
+- [ ] **Licence notices:** inventory the bundle's third-party libraries and licences, add a notices screen and source links.
+- [ ] **App updates** via Sparkle 2 (EdDSA-signed appcast). Runtime updates ship with app updates (the embedded runtime is pinned by version and hash); a separate runtime download channel is not planned.
 - [ ] **Rollback:** keep the previous runtime and let bottles pin a version.
 - [ ] **Bottle schema migrations** (`schemaVersion` exists; add migrators and tests).
 - [ ] **Homebrew cask.**

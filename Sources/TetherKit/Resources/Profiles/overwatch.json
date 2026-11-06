@@ -2,10 +2,11 @@
   "id": "overwatch",
   "name": "Overwatch 2",
   "executables": ["Overwatch.exe"],
+  "steamAppIDs": [2357570],
   "backendPreference": ["dxmt", "d3dmetal", "dxvk"],
   "sync": "msync",
   "windowsVersion": "win10",
   "environment": {},
   "dllOverrides": [],
-  "notes": "Install and launch through Battle.net in its own bottle. Runs D3D11 by default; DXMT is the preferred low-overhead path. Tether does not modify game files or inject anything into the process. See docs/ANTICHEAT.md."
+  "notes": "Install and launch through Steam (tether steam launch <bottle> 2357570). Untested on this runtime. Not verified: whether the Steam version needs the Battle.net app installed or only an account login. Runs D3D11 by default; DXMT is the preferred low-overhead path. Tether does not modify game files or inject anything into the process. See docs/ANTICHEAT.md."
 }
