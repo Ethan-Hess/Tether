@@ -14,8 +14,15 @@ Community build: `athei/wine-build` release `arm64-11.19-1` (`wine-arm64-11.19-1
 | `wineboot --init` on a fresh prefix | Succeeded; prefix created |
 | `wine cmd /c echo` | Succeeded |
 | `notepad`, `winecfg` | Both launched and stayed running (GUI not inspected visually) |
-| D3D11 sample through DXMT | **Not run**: no D3D11 sample binary is available yet |
+| D3D11 sample through DXMT | **Passed** (follow-up run, see below) |
 | Page size inside Wine / FEX paths | Not measured |
+
+## D3D11 sample (follow-up)
+Built `runtime/smoke/d3d11-sample` (own minimal C program, x86_64 PE, cross-compiled with Homebrew `mingw-w64` 14.0.0 / GCC 16.2.0 via `build.sh`). It creates a window and a hardware D3D11 device, clears the back buffer to a changing colour and presents 120 vsynced frames.
+
+Result on the same build and host: exit code 0, `adapter: Apple M4`, `feature level: 0xb000` (11_0), `presented 120 frames`, `OK`. The runtime's compat database classified the exe as `x86_64 (arm64ec)` and selected `dxgi = dxmt`, so the x86_64 exe ran under FEX as ARM64EC through DXMT with no Rosetta.
+
+Not verified: that the window visibly showed the colour sweep (success is based on device creation and every `Present` returning OK, not a screenshot), frame timing, and the 32-bit/WoW64 path.
 
 ## Entitlement and signing
 The loader `lib/wine/aarch64-unix/wine.app` is Developer ID signed (hardened runtime) and carries `com.apple.developer.cross-architecture-support`, plus `allow-jit`, `disable-executable-page-protection` and `disable-library-validation`. The entitlement is granted through an embedded provisioning profile (`ProvisionsAllDevices`, expires 2044) issued to an **individual** developer team, not a company. That suggests it can be obtained with a normal Developer ID team, but **this is unconfirmed**: whether it is a self-serve capability or needs a request to Apple must be checked in the developer portal before we commit to shipping.
