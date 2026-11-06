@@ -1,0 +1,11 @@
+{
+  "id": "steam",
+  "name": "Steam",
+  "executables": ["steam.exe"],
+  "launchArguments": ["-cef-disable-gpu"],
+  "sync": "msync",
+  "windowsVersion": "win10",
+  "environment": {},
+  "dllOverrides": [],
+  "notes": "Windows Steam client, one per bottle. Install with `SteamSetup.exe /S`, then run C:\\Program Files (x86)\\Steam\\Steam.exe. -cef-disable-gpu is required on the wrapped arm64 runtime (wine 11.19): without it the window rendered at first, then went blank after switching between Library, Store and Community. With it, page switching worked in a manual test. Verified: silent install, bootstrap, login, page switching. Not verified: installing or launching a game, Steam Guard, long sessions."
+}

@@ -77,6 +77,26 @@ public struct D3DMetalBackend: GraphicsBackend {
     }
 }
 
+/// Graphics chosen by the runtime, not by Tether (e.g. the wrapped community arm64 build, whose
+/// compatibility database selects DXMT or wined3d per executable). Passive: no DLLs are copied,
+/// no overrides are set, so the runtime's own selection is never disturbed.
+public struct RuntimeManagedBackend: GraphicsBackend {
+    public init() {}
+    public let id = GraphicsBackendID.runtimeManaged
+    public let displayName = "Runtime-managed (DXMT or wined3d, chosen per game by the runtime)"
+    public let supportedAPIs: Set<DirectXAPI> = [.d3d9, .d3d10, .d3d11]
+    public let providedDLLs: [String] = []
+    public let dllOverrides: [DLLOverride] = []
+
+    public func isAvailable(runtime: WineRuntime, paths: TetherPaths) -> Bool {
+        runtime.supports(feature: GraphicsBackends.managedFeature)
+    }
+
+    public func environment(options: BackendOptions) -> [String: String] {
+        options.showHUD ? ["MTL_HUD_ENABLED": "1"] : [:]
+    }
+}
+
 public struct WineD3DBackend: GraphicsBackend {
     public init() {}
     public let id = GraphicsBackendID.wined3d

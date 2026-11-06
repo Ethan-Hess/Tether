@@ -26,6 +26,10 @@ Tether-Reason: <required if downstream-only: why this can't go upstream>
 Tether-Bench: <optional: tether bench result showing the effect, required for performance patches>
 ```
 
+## Checking the queue
+
+Run `runtime/scripts/build-wine.sh --prepare-only` before committing a patch. It validates headers, rejects patch files missing from `series`, and applies the whole queue to the pinned tag.
+
 ## Rebase procedure (once per Wine stable release)
 
 1. Bump the pinned tag in `runtime/scripts/build-wine.sh`.

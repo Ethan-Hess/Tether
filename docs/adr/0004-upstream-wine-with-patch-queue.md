@@ -1,6 +1,6 @@
 # ADR 0004: Upstream Wine with a thin patch queue (not Proton, not a fork)
 
-**Status:** Accepted
+**Status:** Accepted. Partly amended by [ADR 0005](0005-arm64-wine-with-fex.md): the x86_64/wow64 build details below (`--enable-archs=i386,x86_64`, Rosetta) are superseded by a native arm64 + FEX design. The upstream-plus-patch-queue decision stands.
 
 ## Context
 Tether needs a Wine build tuned for macOS. There were three options:

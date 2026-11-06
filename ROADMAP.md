@@ -30,17 +30,18 @@ Tether is 1.0 when **all** of these are true:
 **Goal:** `tether run` starts a real D3D11 program and renders through DXMT.
 
 - [ ] **Wine build** (`runtime/scripts/build-wine.sh`)
+  - **Direction changed ([ADR 0005](docs/adr/0005-arm64-wine-with-fex.md), proposed):** native arm64 Wine with FEX (ARM64EC and WoW64) instead of x86_64 under Rosetta. The spike ran a D3D11 sample through DXMT on a community arm64 build, and the decision is to wrap a pinned, hash-verified community runtime first and build our own later. Open items: confirm the cross-architecture entitlement for our team (needed only once we ship our own loader) and confirm the community build's notarization and redistribution terms. The bullets below this one still describe the earlier x86_64 plan and will be rewritten once those are settled.
   - Pin an upstream Wine stable tag. Build x86_64 under Rosetta with `--enable-archs=i386,x86_64` (wow64, so there are no 32-bit host binaries).
   - x86_64 Homebrew deps in `/usr/local` (freetype, gnutls, sdl2, gstreamer, molten-vk). See prior art: Gcenx's macOS Wine builds and Whisky's Wine.
   - Upstream Wine plus a patch queue, not a fork ([ADR 0004](docs/adr/0004-upstream-wine-with-patch-queue.md)). Disable unneeded features with configure flags (`--without-x --without-wayland --disable-tests`).
   - First patches: **msync**, macOS driver fixes, and Retina mode, extracted from CodeWeavers' published CrossOver source (LGPL) by diffing against the matching upstream tag. Each patch carries an origin and upstream-status header ([runtime/patches/wine/README.md](runtime/patches/wine/README.md)).
-  - CI checks that every patch in `series` applies cleanly and has a valid header.
+  - `build-wine.sh --prepare-only` checks that every patch in `series` applies cleanly, has a valid header, and that no patch file is missing from `series`. Run it locally before committing a patch (automated CI is deferred).
   - Nightly build against Wine's development branch to spot rebase conflicts early.
 - [ ] **DXMT build** (`build-dxmt.sh`): PE DLLs plus `winemetal.so` built against our Wine tree.
 - [ ] **DXVK build** (`build-dxvk.sh`): pin a DXVK version whose Vulkan feature requirements MoltenVK satisfies, and document the choice in an ADR.
 - [ ] **MoltenVK** (`fetch-moltenvk.sh`): pinned release with a checksum.
 - [ ] **Packaging** (`package-runtime.sh`): `runtime.json`, ad-hoc signing, a `.tar.xz` with SHA-256.
-- [ ] **CI:** GitHub Actions on Apple Silicon macOS runners builds the runtime on tag. Release artifacts include checksums and a minisign signature.
+- [ ] **CI** *(deferred: builds and checks run locally for now)*: GitHub Actions on Apple Silicon macOS runners builds the runtime on tag. Release artifacts include checksums and a minisign signature.
 - [ ] `tether runtime install [version]`: download, verify signature and hash, unpack into `Runtimes/`.
 - [ ] **Smoke test set:** `notepad`, `winecfg`, and a redistributable D3D11 sample (built from Microsoft's open-source DirectX samples), run headless in CI where Metal is available.
 
@@ -51,11 +52,11 @@ Tether is 1.0 when **all** of these are true:
 **Goal:** install a launcher, log in, install a game, play.
 
 ### Steam
-- [ ] `steam` profile: Steam client in its own bottle, running the Windows `SteamSetup.exe`.
-- [ ] `steamwebhelper` (CEF) works: rendering, GPU and sandbox flags, and login. Track known CrossOver and Proton fixes and upstream what we can.
-- [ ] **Library import:** parse `steamapps/libraryfolders.vdf` and `appmanifest_<appid>.acf` to list installed games with app IDs.
-- [ ] **Launch by app ID:** `steam.exe -silent` plus `steam://rungameid/<appid>`, so Steamworks DRM, Cloud saves, and achievements work normally.
-- [ ] Per-game profile matching by Steam app ID (add `steamAppIDs` to `GameProfile`).
+- [x] `steam` profile: Steam client in its own bottle, running the Windows `SteamSetup.exe` (`/S` silent install works; installing it from the app is still an M5 item).
+- [x] `steamwebhelper` (CEF) works: rendering, GPU and sandbox flags, and login. Track known CrossOver and Proton fixes and upstream what we can. Manual test on the wrapped arm64 runtime (wine 11.19): login and page switching work with `-cef-disable-gpu` (now in the `steam` profile's `launchArguments`); without it the window went blank after switching pages. Not yet tested: long sessions, installing or launching a game, Steam Guard, and whether sandbox flags matter.
+- [x] **Library import:** parse `steamapps/libraryfolders.vdf` and `appmanifest_<appid>.acf` to list installed games with app IDs (`tether steam list <bottle>`). Tested on synthetic manifests only; still to be checked against a real Steam install.
+- [x] **Launch by app ID:** `tether steam launch <bottle> <appid>` runs Steam.exe with `steam://rungameid/<appid>`, so Steamworks DRM, Cloud saves, and achievements work normally. Checked on one game (There Are No Orcs, Unity, D3D11) from a cold start on the wrapped arm64 runtime: Steam started and the game ran and looked fine in a manual check. Not yet applied: the game's own profile (its env and launch arguments), `-silent`, and Cloud saves or achievements were not tested.
+- [x] Per-game profile matching by Steam app ID (`steamAppIDs` on `GameProfile`; `LaunchRequest.steamAppID` beats exe-name matching).
 - [ ] Steam Overlay: the overlay is Steam's own in-guest feature, not Tether injection, and is left to the user's Steam settings. Document this distinction in ADR 0003.
 - [ ] Controller pass-through: Steam Input and SDL inside Wine.
 - [ ] *Research:* a bridge from Windows games to the **native macOS Steam client** (similar in spirit to Proton's `lsteamclient`, which targets Linux), so games don't need Windows Steam running inside every bottle. Saves memory and CPU, but it's a large project. Decide go or no-go after M2.
@@ -66,9 +67,11 @@ Tether is 1.0 when **all** of these are true:
 
 ### Shared
 - [ ] Profile matching by launcher-provided IDs, not only exe names.
-- [ ] Launch-parameter passthrough (per-game args stored in the bottle).
+- [ ] Launch-parameter passthrough (per-game args stored in the bottle). Per-profile `launchArguments` exist; per-bottle storage does not yet.
 
 **Exit:** Steam and Battle.net pass a scripted checklist (install → login → install game → launch → quit → relaunch) on two macOS versions.
+
+Steam checklist: `scripts/steam-checklist.sh --app <id> --game-process <regex>` (login and game install are done by a person; it verifies the result and writes a report). So far it has run once, non-interactively, against an existing bottle on macOS 26.6.2 (9 passed, 0 failed, 2 skipped: install and bottle creation). A from-scratch run and a second macOS version are still needed, and it checks that processes start and stop, not that the picture is correct. The Battle.net checklist doesn't exist yet.
 
 ## M3: Graphics coverage
 
@@ -171,7 +174,7 @@ Tether is 1.0 when **all** of these are true:
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| **Rosetta 2 phase-out.** Apple has said full Rosetta will be available through macOS 27, with only a subset kept for older games after that. | Existential for the x86_64-Wine design | Track what Apple's game subset covers. Start a research spike on **Wine ARM64EC + an x86 emulator (e.g. FEX)**, where Wine runs natively on arm64 and only Windows x86 code is emulated. This is likely the long-term architecture. |
+| **Rosetta 2 phase-out.** Apple has said full Rosetta will be available through macOS 27, with only a subset kept for older games after that. | Existential for the x86_64-Wine design | Mitigated by moving to **native arm64 Wine + FEX (ARM64EC)** ([ADR 0005](docs/adr/0005-arm64-wine-with-fex.md), [spike](docs/spikes/arm64-fex.md)). New risks: dependence on FEX and on Apple's cross-architecture entitlement (availability for our team unconfirmed), macOS 26.4+ floor. |
 | D3DMetal license or availability changes | Weaker D3D12 support | Keep vkd3d-proton → MoltenVK viable. Contribute to DXMT D3D12 efforts if they emerge. |
 | MoltenVK feature gaps (geometry shaders, transform feedback, etc.) | DXVK and vkd3d-proton titles break | Prefer Metal-native backends. Report gaps upstream. |
 | Steam client (CEF) breakage after Steam updates | Steam unusable until fixed | Nightly Steam smoke test. Fast runtime patch releases. |

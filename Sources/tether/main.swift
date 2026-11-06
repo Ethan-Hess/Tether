@@ -6,7 +6,7 @@ struct Tether: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "tether",
         abstract: "Run Windows games on macOS with Wine + Metal.",
-        subcommands: [BottleCommand.self, Run.self, Env.self, RuntimeCommand.self, Backends.self, Profiles.self, Doctor.self]
+        subcommands: [BottleCommand.self, Run.self, Env.self, RuntimeCommand.self, SteamCommand.self, Backends.self, Profiles.self, Doctor.self]
     )
 }
 
@@ -116,7 +116,8 @@ struct Run: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Run a Windows executable in a bottle.")
     @Argument var bottle: String
     @Argument(help: "Windows path (C:\\...) or host path to a .exe") var executable: String
-    @Argument(parsing: .captureForPassthrough) var arguments: [String] = []
+    @Argument(parsing: .remaining, help: "Arguments for the game. Put `--` first if they start with a dash: `tether run t game.exe -- -windowed`.")
+    var arguments: [String] = []
     @Option var profile: String?
     @Flag(help: "Enable Wine/backend logging to the bottle's logs/wine.log.") var debug = false
     @Flag(help: "Wait for the process to exit.") var wait = false
@@ -126,6 +127,7 @@ struct Run: ParsableCommand {
         let b = try BottleStore().load(name: bottle)
         let plan = try launcher.plan(LaunchRequest(bottle: b, executable: executable, arguments: arguments, profileID: profile, debug: debug))
         printPolicyWarnings(plan.environment)
+        printBackendNotice(plan)
         let process = try launcher.launch(plan)
         print("Started (pid \(process.processIdentifier)) with \(plan.environment.backend.displayName)")
         if wait {
@@ -149,11 +151,17 @@ struct Env: ParsableCommand {
         print("# backend: \(plan.environment.backend.displayName)")
         print("# profile: \(plan.environment.profile?.name ?? "none")")
         printPolicyWarnings(plan.environment)
+        printBackendNotice(plan)
         for (k, v) in plan.environment.variables.sorted(by: { $0.key < $1.key }) {
             print("\(k)=\(v)")
         }
         print("# exec: \(([plan.executableURL.path] + plan.arguments).joined(separator: " "))")
     }
+}
+
+func printBackendNotice(_ plan: LaunchPlan) {
+    guard let ignored = plan.ignoredBackendChoice else { return }
+    FileHandle.standardError.write("note: this runtime chooses the graphics backend per game itself, so the bottle's '\(ignored.rawValue)' setting has no effect\n".data(using: .utf8)!)
 }
 
 func printPolicyWarnings(_ env: LaunchEnvironment) {
@@ -165,18 +173,116 @@ func printPolicyWarnings(_ env: LaunchEnvironment) {
     }
 }
 
+// MARK: - steam
+
+struct SteamCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "steam",
+        abstract: "Inspect Steam inside a bottle (read-only).",
+        subcommands: [List.self, Launch.self]
+    )
+
+    struct Launch: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: "Launch an installed game through Steam (steam://rungameid/<appid>).")
+        @Argument var bottle: String
+        @Argument(help: "Steam app ID (see `tether steam list`).") var appID: Int
+        @Flag(help: "Enable Wine/backend logging to the bottle's logs/wine.log.") var debug = false
+
+        func run() throws {
+            let b = try BottleStore().load(name: bottle)
+            let steamExe = b.driveC.appendingPathComponent(SteamLibrary.defaultRootInBottle + "/Steam.exe")
+            guard FileManager.default.fileExists(atPath: steamExe.path) else {
+                throw ValidationError("Steam isn't installed in '\(bottle)' (no \(SteamLibrary.defaultExecutableInBottle)).")
+            }
+            guard let url = SteamLibrary.runGameURL(appID: appID) else { throw ValidationError("Invalid app ID \(appID).") }
+            let installed = SteamLibrary.installedApps(in: b).first { $0.appID == appID }
+            if installed == nil {
+                FileHandle.standardError.write("warning: app \(appID) isn't listed as installed in '\(bottle)'; Steam may open its store page instead.\n".data(using: .utf8)!)
+            }
+            // The Steam profile (matched by Steam.exe) applies; the game itself is started by Steam.
+            let launcher = Launcher()
+            let plan = try launcher.plan(LaunchRequest(bottle: b, executable: SteamLibrary.defaultExecutableInBottle, arguments: [url], debug: debug))
+            printBackendNotice(plan)
+            let process = try launcher.launch(plan)
+            print("Asked Steam to launch \(installed?.name ?? "app \(appID)") (pid \(process.processIdentifier))")
+        }
+    }
+
+    struct List: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: "List games Steam reports as installed in a bottle.")
+        @Argument var bottle: String
+        @Option(help: "Host path of the Steam folder, if it isn't in C:\\Program Files (x86)\\Steam.")
+        var steamRoot: String?
+
+        func run() throws {
+            let b = try BottleStore().load(name: bottle)
+            let apps = SteamLibrary.installedApps(in: b, steamRoot: steamRoot.map { URL(fileURLWithPath: $0, isDirectory: true) })
+            if apps.isEmpty { print("No installed Steam games found in '\(bottle)'."); return }
+            let profiles = ProfileLibrary.load()
+            for app in apps {
+                let profile = profiles.match(steamAppID: app.appID)?.id ?? "-"
+                let state = app.isFullyInstalled ? "installed" : "incomplete"
+                print("\(app.appID)\t\(app.name)\t\(state)\tprofile=\(profile)\t\(app.installURL.path)")
+            }
+        }
+    }
+}
+
 // MARK: - info commands
 
 struct RuntimeCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "runtime", abstract: "List installed Wine runtimes.")
-    func run() {
-        let all = RuntimeStore().list()
-        if all.isEmpty { print("No runtimes installed. See runtime/README.md."); return }
-        for r in all {
-            let comps = r.manifest.components.map { "\($0.name) \($0.version)" }.joined(separator: ", ")
-            print("\(r.version)\twine \(r.manifest.wineVersion)\t[\(r.manifest.features.joined(separator: ","))]\t\(comps)")
+    static let configuration = CommandConfiguration(
+        commandName: "runtime",
+        abstract: "List and install Wine runtimes.",
+        subcommands: [List.self, Install.self],
+        defaultSubcommand: List.self
+    )
+
+    struct List: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: "List installed runtimes.")
+        func run() {
+            let all = RuntimeStore().list()
+            if all.isEmpty { print("No runtimes installed. Run `tether runtime install`."); return }
+            for r in all {
+                let comps = r.manifest.components.map { "\($0.name) \($0.version)" }.joined(separator: ", ")
+                print("\(r.version)\twine \(r.manifest.wineVersion)\t[\(r.manifest.features.joined(separator: ","))]\t\(comps)")
+            }
         }
     }
+
+    struct Install: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: "Download, verify and install a runtime.")
+        @Argument(help: "Runtime version (default: newest in the catalog).") var version: String?
+
+        func run() throws {
+            guard let source = RuntimeCatalog.bundled().source(version: version) else {
+                throw ValidationError("No runtime \(version.map { "'\($0)'" } ?? "") in the catalog.")
+            }
+            let mb = Double(source.size) / 1_000_000
+            print("Installing runtime \(source.version) (wine \(source.wineVersion)), \(String(format: "%.0f", mb)) MB from \(source.url.host ?? "?")…")
+            print("The download is verified against a pinned SHA-256 before anything is unpacked.")
+            do {
+                let runtime = try blocking { try await RuntimeInstaller().install(source) }
+                print("Installed \(runtime.version) at \(runtime.root.path)")
+            } catch RuntimeInstallError.alreadyInstalled(let v) {
+                print("Runtime \(v) is already installed.")
+            }
+        }
+    }
+}
+
+/// Runs async work from a synchronous command and returns its result.
+final class ResultBox<T>: @unchecked Sendable { var result: Result<T, Error>? }
+
+func blocking<T: Sendable>(_ work: @escaping @Sendable () async throws -> T) throws -> T {
+    let box = ResultBox<T>()
+    let done = DispatchSemaphore(value: 0)
+    Task {
+        do { box.result = .success(try await work()) } catch { box.result = .failure(error) }
+        done.signal()
+    }
+    done.wait()
+    return try box.result!.get()
 }
 
 struct Backends: ParsableCommand {

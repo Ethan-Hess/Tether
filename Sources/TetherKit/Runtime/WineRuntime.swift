@@ -17,14 +17,17 @@ public struct RuntimeManifest: Codable, Hashable, Sendable {
 
 /// An installed Wine runtime: Wine itself plus the bundled open-source graphics backends.
 ///
-/// Expected layout:
+/// Expected layout (native arm64 Wine with FEX, see ADR 0005):
 /// ```
 /// Runtimes/<version>/
 ///   runtime.json
 ///   bin/wine, bin/wineserver
-///   lib/wine/{x86_64-unix,x86_64-windows,i386-windows}/
-///   backends/<backend-id>/{x86_64,i386}/*.dll   (+ unix-side libs where needed)
+///   lib/wine/{aarch64-unix,aarch64-windows,x86_64-windows,i386-windows}/
+///   lib/wine/aarch64-unix/wine.app   signed loader that carries the cross-architecture entitlement
+///   backends/<backend-id>/...        only for backends Tether bundles itself
 /// ```
+/// A wrapped community runtime ships its own DXMT and wined3d modules under `lib/wine/dxgi/` and
+/// `lib/wine/d3d9/` and picks one per executable, so it may have no `backends/` directory.
 public struct WineRuntime: Hashable, Sendable {
     public let root: URL
     public let manifest: RuntimeManifest
@@ -52,7 +55,7 @@ public enum RuntimeStoreError: Error, LocalizedError {
 
     public var errorDescription: String? {
         switch self {
-        case .noRuntimesInstalled: return "No Wine runtime installed. See runtime/README.md to build one."
+        case .noRuntimesInstalled: return "No Wine runtime installed. Run `tether runtime install`."
         case .notFound(let v): return "Runtime '\(v)' is not installed."
         }
     }

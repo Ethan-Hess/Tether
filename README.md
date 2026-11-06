@@ -19,7 +19,7 @@ Tether is an open-source alternative to CrossOver for macOS. It pairs a native S
  Tether.app / tether CLI          (Swift: bottles, profiles, launch planning)
           │  posix_spawn + environment only. Never in the game's address space.
           ▼
- Wine (x86_64, translated by Rosetta 2; wow64 for 32-bit)
+ Wine (native arm64; FEX translates x86 code. See ADR 0005, in progress)
           │
           ▼
  Graphics backend (pluggable, chosen per game)
@@ -37,8 +37,7 @@ The full design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## Requirements
 
 - Apple Silicon Mac (M1 or newer)
-- macOS 14 Sonoma or newer
-- Rosetta 2 (`softwareupdate --install-rosetta`)
+- macOS 14 Sonoma or newer to build and run the app. Running games with the planned arm64 + FEX runtime needs macOS 26.4+ ([ADR 0005](docs/adr/0005-arm64-wine-with-fex.md)). Rosetta 2 is only needed for the earlier x86_64 runtime.
 - Xcode 16+ or the Swift 6 command line tools, to build
 
 ## Quick start (developers)

@@ -17,8 +17,8 @@ Tether has three layers: a **host** (Swift app and CLI), a **runtime** (Wine plu
 └─────────────────────────────────────┬───────────────────────────────────────────┘
                                       │ posix_spawn(wine, env)   ← only interface
 ┌─────────────────────────────────────▼──────── runtime (runtime/, built) ────────┐
-│  wine (x86_64 Mach-O, run under Rosetta 2) + wineserver                         │
-│  lib/wine/{x86_64-unix, x86_64-windows, i386-windows}                           │
+│  wine (arm64 Mach-O, FEX translates x86) + wineserver       [target: ADR 0005]  │
+│  lib/wine/{aarch64-unix, aarch64-windows, x86_64-windows, i386-windows}         │
 │  backends/dxmt/{x86_64,i386}/*.dll   backends/dxvk/{x86_64,i386}/*.dll          │
 │  (+ MoltenVK dylib, DXMT winemetal.so)                                          │
 │  UserComponents/d3dmetal  ← imported by the user from Apple GPTK                │
@@ -31,7 +31,7 @@ Tether has three layers: a **host** (Swift app and CLI), a **runtime** (Wine plu
 
 - **One `wineserver` per bottle.** Bottles share nothing, so a crash or a stray process in one bottle can't affect another.
 - **The host is never in the game's address space.** `Launcher` writes files, builds an environment, and spawns `bin/wine` with the target executable. After that it can only wait for exit or run `wineserver -k`. There is no IPC channel into the game, no `DYLD_INSERT_LIBRARIES`, and no `task_for_pid`. See [ADR 0003](adr/0003-no-process-injection.md).
-- **Rosetta 2 handles x86_64 → arm64.** Wine is built as x86_64 and translated by Rosetta. 32-bit Windows code runs through Wine's wow64 mode, so no 32-bit host process is required.
+- **FEX handles x86 → arm64.** Wine runs natively on arm64 and FEX translates only the Windows x86 code (64-bit as ARM64EC, 32-bit through WoW64). FEX needs 4K pages, which macOS provides to a signed app with the cross-architecture entitlement (macOS 26.4+). See [ADR 0005](adr/0005-arm64-wine-with-fex.md) and the [spike](spikes/arm64-fex.md). The code and scripts still reflect the earlier x86_64/Rosetta design until the runtime pipeline is reworked.
 
 ## Launch pipeline
 

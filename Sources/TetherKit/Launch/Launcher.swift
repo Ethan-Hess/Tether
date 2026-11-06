@@ -8,13 +8,16 @@ public struct LaunchRequest: Sendable {
     /// Forces a profile; otherwise bottle's profile, then auto-match by executable name.
     public var profileID: String?
     public var debug: Bool
+    /// Steam app ID of the game being launched, if known; matched against profiles before the exe name.
+    public var steamAppID: Int?
 
-    public init(bottle: Bottle, executable: String, arguments: [String] = [], profileID: String? = nil, debug: Bool = false) {
+    public init(bottle: Bottle, executable: String, arguments: [String] = [], profileID: String? = nil, debug: Bool = false, steamAppID: Int? = nil) {
         self.bottle = bottle
         self.executable = executable
         self.arguments = arguments
         self.profileID = profileID
         self.debug = debug
+        self.steamAppID = steamAppID
     }
 }
 
@@ -26,12 +29,15 @@ public struct LaunchPlan: Sendable {
     public var executableURL: URL
     public var arguments: [String]
     public var workingDirectory: URL
+    /// A backend the bottle explicitly asked for that this runtime can't honour because it
+    /// manages graphics itself. Surfaced so the CLI/UI can say so instead of silently ignoring it.
+    public var ignoredBackendChoice: GraphicsBackendID? = nil
 }
 
 /// Spawns Wine processes for a bottle.
 ///
 /// Tether's host process is never inside the game's address space: it only sets up files
-/// and environment, then `posix_spawn`s Wine (x86_64, translated by Rosetta 2). After that,
+/// and environment, then `posix_spawn`s Wine (native arm64; FEX translates x86 code). After that,
 /// the only interaction is waiting for exit or asking `wineserver` to shut down.
 public struct Launcher: Sendable {
     public let paths: TetherPaths
@@ -50,6 +56,7 @@ public struct Launcher: Sendable {
         if let id = request.profileID ?? request.bottle.config.profileID {
             return profiles.profile(id: id)
         }
+        if let appID = request.steamAppID, let match = profiles.match(steamAppID: appID) { return match }
         return profiles.match(executable: request.executable)
     }
 
@@ -81,8 +88,12 @@ public struct Launcher: Sendable {
             runtime: runtime,
             environment: env,
             executableURL: runtime.wineBinary,
-            arguments: [request.executable] + request.arguments,
-            workingDirectory: workingDirectory
+            arguments: [request.executable] + (profile?.launchArguments ?? []) + request.arguments,
+            workingDirectory: workingDirectory,
+            ignoredBackendChoice: {
+                guard let choice = request.bottle.config.backend, choice != backend.id else { return nil }
+                return backend.id == .runtimeManaged ? choice : nil
+            }()
         )
     }
 

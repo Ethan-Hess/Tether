@@ -31,15 +31,19 @@ public struct SystemCheck: Sendable {
         let v = ProcessInfo.processInfo.operatingSystemVersion
         items.append(Item(name: "macOS ≥ 14", ok: v.majorVersion >= 14, detail: "\(v.majorVersion).\(v.minorVersion).\(v.patchVersion)"))
 
-        let rosetta = ["/Library/Apple/usr/libexec/oah/libRosettaRuntime", "/Library/Apple/usr/share/rosetta/rosetta"]
-            .contains { fm.fileExists(atPath: $0) }
-        items.append(Item(name: "Rosetta 2", ok: rosetta, detail: rosetta ? "installed" : "run: softwareupdate --install-rosetta"))
+        // The arm64 + FEX runtime needs the cross-architecture entitlement path (ADR 0005).
+        let canRunGames = RuntimeInstaller.os(v, isAtLeast: "26.4")
+        items.append(Item(
+            name: "macOS ≥ 26.4 (to run games)",
+            ok: canRunGames,
+            detail: canRunGames ? "ok" : "the app works, but the Wine runtime needs macOS 26.4 or newer"
+        ))
 
         let runtimes = RuntimeStore(paths: paths).list()
         items.append(Item(
             name: "Wine runtime",
             ok: !runtimes.isEmpty,
-            detail: runtimes.isEmpty ? "none installed (see runtime/README.md)" : runtimes.map(\.version).joined(separator: ", ")
+            detail: runtimes.isEmpty ? "none installed (run: tether runtime install)" : runtimes.map(\.version).joined(separator: ", ")
         ))
 
         let gptk = fm.fileExists(atPath: paths.userComponents.appendingPathComponent("d3dmetal").path)
