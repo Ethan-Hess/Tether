@@ -54,17 +54,33 @@ public struct Launcher: Sendable {
         self.installer = BackendInstaller(paths: paths)
     }
 
-    public func resolveProfile(for request: LaunchRequest) -> GameProfile? {
+    /// How a profile was chosen for a launch.
+    public enum ProfileMatch: Sendable {
+        /// Named by the request or by the bottle.
+        case explicit
+        /// Matched by Steam app ID. The executable being launched is then usually a launcher
+        /// (Steam.exe), not the game, so the profile's `launchArguments` must not be passed to it.
+        case steamAppID
+        /// Matched by the executable's file name.
+        case executable
+    }
+
+    public func resolveProfileMatch(for request: LaunchRequest) -> (profile: GameProfile, match: ProfileMatch)? {
         if let id = request.profileID ?? request.bottle.config.profileID {
-            return profiles.profile(id: id)
+            return profiles.profile(id: id).map { ($0, .explicit) }
         }
-        if let appID = request.steamAppID, let match = profiles.match(steamAppID: appID) { return match }
-        return profiles.match(executable: request.executable)
+        if let appID = request.steamAppID, let match = profiles.match(steamAppID: appID) { return (match, .steamAppID) }
+        return profiles.match(executable: request.executable).map { ($0, .executable) }
+    }
+
+    public func resolveProfile(for request: LaunchRequest) -> GameProfile? {
+        resolveProfileMatch(for: request)?.profile
     }
 
     public func plan(_ request: LaunchRequest) throws -> LaunchPlan {
         let runtime = try runtimes.resolve(version: request.bottle.config.runtimeVersion)
-        let profile = resolveProfile(for: request)
+        let matched = resolveProfileMatch(for: request)
+        let profile = matched?.profile
         let backend = GraphicsBackends.resolve(
             bottleChoice: request.bottle.config.backend,
             profile: profile,
@@ -91,7 +107,12 @@ public struct Launcher: Sendable {
             runtime: runtime,
             environment: env,
             executableURL: runtime.wineBinary,
-            arguments: [request.executable] + (profile?.launchArguments ?? []) + request.arguments,
+            // Order: profile, bottle, command line. A profile matched only by Steam app ID
+            // contributes no arguments (see `ProfileMatch.steamAppID`).
+            arguments: [request.executable]
+                + (matched?.match == .steamAppID ? [] : (profile?.launchArguments ?? []))
+                + request.bottle.config.launchArguments
+                + request.arguments,
             workingDirectory: workingDirectory,
             // A runtime with rules honours dxmt and wined3d; one without chooses by itself, and
             // anything else is never available, so report what was asked for but can't be applied.

@@ -82,6 +82,9 @@ struct BottleCommand: ParsableCommand {
         @Option(help: "Show the backend's performance HUD (true/false).") var hud: Bool?
         @Option(name: .customLong("env"), help: "KEY=VALUE (repeatable). Empty value removes the key.")
         var env: [String] = []
+        @Option(name: .customLong("arg"), help: "Launch argument for every executable run in this bottle, Steam.exe included (repeatable; replaces the list). Use the = form for values that start with a dash: --arg=-silent.")
+        var launchArgs: [String] = []
+        @Flag(name: .customLong("clear-args"), help: "Remove the bottle's launch arguments.") var clearArgs = false
 
         func run() throws {
             let store = BottleStore()
@@ -90,6 +93,8 @@ struct BottleCommand: ParsableCommand {
             if let profile { b.config.profileID = profile == "none" ? nil : profile }
             if let sync { b.config.sync = sync }
             if let hud { b.config.showPerformanceHUD = hud }
+            if clearArgs { b.config.launchArguments = [] }
+            if !launchArgs.isEmpty { b.config.launchArguments = launchArgs }
             for pair in env {
                 let parts = pair.split(separator: "=", maxSplits: 1).map(String.init)
                 guard let key = parts.first, !key.isEmpty else { continue }

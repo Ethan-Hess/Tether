@@ -92,7 +92,7 @@ if [[ ! -x "$TETHER" ]]; then swift build >/dev/null 2>&1 || true; fi
 if [[ ! -x "$TETHER" ]]; then record FAIL "tether binary" "not found at $TETHER (run swift build)"; exit 1; fi
 
 if tether runtime 2>/dev/null | grep -q 'wine'; then
-  record PASS "runtime installed" "$(tether runtime | head -1 | cut -f1,2)"
+  record PASS "runtime installed" "newest (used by bottles): $(tether runtime | tail -1 | cut -f1,2)"
 else
   if tether runtime install >/dev/null 2>&1 && tether runtime | grep -q 'wine'; then
     record PASS "runtime installed" "installed now"
@@ -156,10 +156,19 @@ else
 fi
 
 # --- 5. launch ----------------------------------------------------------------------------------
+# On a failed launch, say what is still running and show Steam's own last log lines (with account
+# ids masked), because a hung Steam leaves nothing else behind.
+diagnose_launch() {
+  echo "  diagnostics: steam.exe=$(count_procs '[s]team\.exe') webhelper=$(count_procs '[s]teamwebhelper') game=$(count_procs "$GAME_RE")"
+  if [[ -f "$STEAM_DIR/logs/console_log.txt" ]]; then
+    echo "  last Steam console_log lines (ids masked), and wine.log under Bottles/$BOTTLE/logs:"
+    tail -n 6 "$STEAM_DIR/logs/console_log.txt" | sed -E 's/\[U:1:[0-9]+\]/[U:1:*]/g; s/7656119[0-9]{10}/<id>/g; s/^/    /' | cut -c1-170
+  fi
+}
 launch_check() { # label
-  tether steam launch "$BOTTLE" "$APP" >/dev/null 2>&1
+  tether steam launch --debug "$BOTTLE" "$APP" >/dev/null 2>&1
   if wait_until 180 game_up; then record PASS "$1" "game process is running"
-  else record FAIL "$1" "game process did not appear within 180s"; fi
+  else record FAIL "$1" "game process did not appear within 180s (see diagnostics above and wine.log)"; diagnose_launch; fi
 }
 if [[ -n "$APP" ]]; then launch_check "launch game"; else record SKIP "launch game" "no --app given"; fi
 
@@ -191,7 +200,7 @@ if [[ -n "$REPORT" ]]; then
     echo
     echo "- macOS: $(sw_vers -productVersion) ($(uname -m))"
     echo "- Tether commit: $(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
-    echo "- Runtime: $(tether runtime 2>/dev/null | head -1 | cut -f1,2)"
+    echo "- Runtime: $(tether runtime 2>/dev/null | tail -1 | cut -f1,2)"
     echo "- Bottle: $BOTTLE, app: ${APP:-none}"
     echo "- Date: $(date -u +%Y-%m-%dT%H:%MZ)"
     echo

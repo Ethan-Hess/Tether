@@ -31,6 +31,9 @@ public struct BottleConfig: Codable, Hashable, Sendable {
     public var environment: [String: String]
     /// Show the backend-native performance HUD (DXVK_HUD / Metal HUD).
     public var showPerformanceHUD: Bool
+    /// Command-line arguments passed to every executable run in this bottle (Steam.exe included),
+    /// after the profile's own and before any given on the command line.
+    public var launchArguments: [String]
     public var createdAt: Date
 
     public init(
@@ -41,6 +44,7 @@ public struct BottleConfig: Codable, Hashable, Sendable {
         sync: SyncMode? = nil,
         environment: [String: String] = [:],
         showPerformanceHUD: Bool = false,
+        launchArguments: [String] = [],
         createdAt: Date = Date()
     ) {
         self.schemaVersion = Self.currentSchemaVersion
@@ -51,7 +55,29 @@ public struct BottleConfig: Codable, Hashable, Sendable {
         self.sync = sync
         self.environment = environment
         self.showPerformanceHUD = showPerformanceHUD
+        self.launchArguments = launchArguments
         self.createdAt = createdAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case schemaVersion, runtimeVersion, backend, profileID, windowsVersion, sync
+        case environment, showPerformanceHUD, launchArguments, createdAt
+    }
+
+    /// Explicit so that fields added later decode with a default from `bottle.json` files that
+    /// predate them (`launchArguments`), instead of failing to load existing bottles.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try c.decode(Int.self, forKey: .schemaVersion)
+        runtimeVersion = try c.decodeIfPresent(String.self, forKey: .runtimeVersion)
+        backend = try c.decodeIfPresent(GraphicsBackendID.self, forKey: .backend)
+        profileID = try c.decodeIfPresent(String.self, forKey: .profileID)
+        windowsVersion = try c.decode(WindowsVersion.self, forKey: .windowsVersion)
+        sync = try c.decodeIfPresent(SyncMode.self, forKey: .sync)
+        environment = try c.decode([String: String].self, forKey: .environment)
+        showPerformanceHUD = try c.decode(Bool.self, forKey: .showPerformanceHUD)
+        launchArguments = try c.decodeIfPresent([String].self, forKey: .launchArguments) ?? []
+        createdAt = try c.decode(Date.self, forKey: .createdAt)
     }
 }
 
