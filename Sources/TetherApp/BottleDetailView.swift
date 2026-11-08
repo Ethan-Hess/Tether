@@ -119,8 +119,9 @@ struct BottleDetailView: View {
             .disabled(busy != nil || !model.hasRuntime)
             Toggle("Log Wine output for the next run (slower)", isOn: $debugLogging)
             if !model.hasRuntime {
-                Text("Install a Wine runtime first (see the banner in the sidebar).")
+                Text("Games need a Wine runtime first.")
                     .font(.callout).foregroundStyle(.secondary)
+                InstallRuntimeButton()
             }
         }
     }
