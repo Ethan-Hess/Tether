@@ -15,7 +15,7 @@ cask "tether" do
   # Tether updates itself with Sparkle, so `brew upgrade` leaves it alone.
   auto_updates true
   depends_on arch: :arm64
-  depends_on macos: ">= :tahoe"
+  depends_on macos: :tahoe
 
   app "Tether.app"
 
