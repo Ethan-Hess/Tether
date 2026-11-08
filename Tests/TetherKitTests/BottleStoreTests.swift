@@ -33,3 +33,34 @@ import Testing
         #expect(throws: BottleStoreError.notFound("gone")) { try store.delete(name: "gone") }
     }
 }
+
+@Suite struct BottleStoreManagementTests {
+    let home = TempHome()
+    var store: BottleStore { BottleStore(paths: home.paths) }
+
+    @Test func renameMovesTheBottleAndKeepsConfig() throws {
+        try store.create(name: "old", config: BottleConfig(profileID: "steam"))
+        let renamed = try store.rename(from: "old", to: "new")
+        #expect(renamed.name == "new")
+        #expect(renamed.config.profileID == "steam")
+        #expect(try store.list().map(\.name) == ["new"])
+    }
+
+    @Test func renameRejectsTakenAndInvalidNames() throws {
+        try store.create(name: "a")
+        try store.create(name: "b")
+        #expect(throws: BottleStoreError.alreadyExists("b")) { try store.rename(from: "a", to: "b") }
+        #expect(throws: BottleStoreError.self) { try store.rename(from: "a", to: "../evil") }
+        #expect(throws: BottleStoreError.notFound("zzz")) { try store.rename(from: "zzz", to: "c") }
+        #expect(try store.list().map(\.name) == ["a", "b"])
+    }
+
+    @Test func duplicateCopiesFilesAndLeavesTheOriginal() throws {
+        let original = try store.create(name: "src")
+        try Data("x".utf8).write(to: original.prefixURL.appendingPathComponent("marker"))
+        let copy = try store.duplicate(name: "src", as: "dst")
+        #expect(FileManager.default.fileExists(atPath: copy.prefixURL.appendingPathComponent("marker").path))
+        #expect(try store.list().map(\.name) == ["dst", "src"])
+        #expect(throws: BottleStoreError.alreadyExists("dst")) { try store.duplicate(name: "src", as: "dst") }
+    }
+}

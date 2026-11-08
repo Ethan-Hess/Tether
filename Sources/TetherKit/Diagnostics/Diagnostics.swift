@@ -32,6 +32,10 @@ public struct SystemCheck: Sendable {
 
     public let items: [Item]
 
+    public init(items: [Item]) {
+        self.items = items
+    }
+
     public static func run(paths: TetherPaths = .default) -> SystemCheck {
         let fm = FileManager.default
         var items: [Item] = []
@@ -79,4 +83,66 @@ public struct SystemCheck: Sendable {
 
         return SystemCheck(items: items)
     }
+}
+
+/// A Markdown report a user can paste into a bug report.
+///
+/// Deliberately leaves out anything personal or secret: environment variable *values* and launch
+/// argument contents are not included (only their names or counts), nothing is read from Steam,
+/// and the home directory is replaced with `~` everywhere.
+public enum DiagnosticsReport {
+    public static func make(
+        bottle: Bottle,
+        runtime: WineRuntime?,
+        system: SystemCheck,
+        sessions: [LaunchLog.Session],
+        home: String = NSHomeDirectory(),
+        tailLines: Int = 200
+    ) -> String {
+        let v = ProcessInfo.processInfo.operatingSystemVersion
+        var out: [String] = ["# Tether diagnostics", ""]
+        out.append("- macOS: \(v.majorVersion).\(v.minorVersion).\(v.patchVersion)")
+        #if arch(arm64)
+        out.append("- Architecture: arm64")
+        #else
+        out.append("- Architecture: x86_64")
+        #endif
+        if let runtime {
+            out.append("- Runtime: \(runtime.version) (Wine \(runtime.manifest.wineVersion), features: \(runtime.manifest.features.joined(separator: ", ")))")
+        } else {
+            out.append("- Runtime: none installed")
+        }
+
+        let c = bottle.config
+        out += ["", "## Bottle `\(bottle.name)`", ""]
+        out.append("- Backend: \(c.backend?.rawValue ?? "auto")")
+        out.append("- Profile: \(c.profileID ?? "none")")
+        out.append("- Windows version: \(c.windowsVersion.rawValue)")
+        out.append("- Sync: \(c.sync?.rawValue ?? "default")")
+        out.append("- Performance HUD: \(c.showPerformanceHUD)")
+        out.append("- Launch arguments: \(c.launchArguments.count) (contents not included)")
+        out.append("- Environment variables set: \(c.environment.keys.sorted().joined(separator: ", ").nilIfEmpty ?? "none") (values not included)")
+
+        out += ["", "## System checks", ""]
+        for item in system.items {
+            out.append("- \(item.ok ? "OK" : "FAIL") \(item.name): \(item.detail)")
+        }
+
+        out += ["", "## Latest launch log", ""]
+        if let last = sessions.last {
+            let lines = last.text.split(separator: "\n", omittingEmptySubsequences: false).suffix(tailLines)
+            out.append("`\(last.executable)` at \(last.start.map { ISO8601DateFormatter().string(from: $0) } ?? "unknown time")")
+            out += ["", "```", lines.joined(separator: "\n"), "```"]
+        } else {
+            out.append("No log. Turn on \"Log Wine output\" and run again.")
+        }
+
+        var report = out.joined(separator: "\n") + "\n"
+        if home.count > 1 { report = report.replacingOccurrences(of: home, with: "~") }
+        return report
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }

@@ -11,11 +11,27 @@ public struct SteamApp: Hashable, Sendable, Identifiable {
     public let installURL: URL
     public let sizeOnDisk: Int64?
     public let lastUpdated: Date?
+    /// When the game was last started through this Steam install, if Steam recorded it.
+    public let lastPlayed: Date?
     public let buildID: String?
     public let stateFlags: Int?
 
     /// Steam's `StateFlags` bit 4 means fully installed. Unknown flags are treated as installed
     /// because older manifests omit them.
+    /// Steam's own support software (shared redistributables, Linux and Proton runtimes) rather
+    /// than something to play. Steam installs these alongside games; a library view hides them.
+    public var isTool: Bool { Self.toolAppIDs.contains(appID) }
+
+    static let toolAppIDs: Set<Int> = [
+        228980,  // Steamworks Common Redistributables
+        1007,    // Steam Client Content
+        1070560, // Steam Linux Runtime 1.0 (scout)
+        1391110, // Steam Linux Runtime 2.0 (soldier)
+        1628350, // Steam Linux Runtime 3.0 (sniper)
+        1493710, // Proton Experimental
+        2180100, // Proton Hotfix
+    ]
+
     public var isFullyInstalled: Bool { stateFlags.map { $0 & 4 != 0 } ?? true }
 }
 
@@ -89,6 +105,7 @@ public enum SteamLibrary {
             installURL: libraryRoot.appendingPathComponent("steamapps/common/\(installDir)", isDirectory: true),
             sizeOnDisk: state["SizeOnDisk"]?.string.flatMap { Int64($0) },
             lastUpdated: state["LastUpdated"]?.string.flatMap { TimeInterval($0) }.map { Date(timeIntervalSince1970: $0) },
+            lastPlayed: state["LastPlayed"]?.string.flatMap { TimeInterval($0) }.flatMap { $0 > 0 ? Date(timeIntervalSince1970: $0) : nil },
             buildID: state["buildid"]?.string,
             stateFlags: state["StateFlags"]?.string.flatMap { Int($0) }
         )
