@@ -70,5 +70,6 @@ Option A, confirmed by the project owner: embed the pinned runtime in Tether.app
 - **Not tested:** a real browser-downloaded zip or dmg (I set the attribute by hand on every file), moving the app to /Applications, running a game rather than `wine --version` from the translocated read-only location, and other macOS versions or Macs. Keep `tether runtime install` for development and for runtime rollback testing, and have `tether doctor` flag a quarantine attribute on an installed runtime, since the failure is otherwise a confusing dialog.
 
 ## Open items
-- Licence and version inventory for the bundle.
-- Whether a Tether.app that embeds the bundle notarizes cleanly (needs a test with a real signing identity, which we don't have in this environment).
+- ~~Licence and version inventory for the bundle.~~ Done for licences (see [THIRD-PARTY.md](../THIRD-PARTY.md); five rows still unverified, versions only where known). Built in M6 ([ADR 0006](../adr/0006-distribution-and-updates.md)).
+- Whether a Tether.app that embeds the bundle notarizes cleanly (needs a test with a real signing identity, which we don't have in this environment). `scripts/package-app.sh` and `release.sh` are written for it (`SIGN_IDENTITY`, `NOTARY_PROFILE`) but have not been run.
+- Done in M6 for the ad-hoc case: `scripts/package-app.sh` embeds the runtime, signs the outer app without `--deep`, and `scripts/verify-app.sh` shows `wine.app` is byte-identical to the verified download and the app resolves it. The embedded `wine --version` runs from inside the app. Still untested: a game launched from a quarantined, browser-downloaded DMG.

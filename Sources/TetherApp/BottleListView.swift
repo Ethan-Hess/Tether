@@ -10,7 +10,8 @@ struct BottleListView: View {
         NavigationSplitView {
             VStack(spacing: 0) {
                 RuntimeBanner()
-                List(model.bottles, selection: $model.selection) { bottle in
+                List(selection: $model.selection) {
+                    ForEach(model.bottles) { bottle in
                     HStack {
                         Label(bottle.name, systemImage: "shippingbox")
                         Spacer()
@@ -25,9 +26,20 @@ struct BottleListView: View {
                         Button("Delete…", role: .destructive) { model.selection = bottle.id }
                             .disabled(model.isRunning(bottle))
                     }
+                    }
+                    if !model.problems.isEmpty {
+                        Section("Can't open") {
+                            ForEach(model.problems) { problem in
+                                Label(problem.name, systemImage: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.orange)
+                                    .help(problem.message)
+                                    .selectionDisabled()
+                            }
+                        }
+                    }
                 }
                 .overlay {
-                    if model.bottles.isEmpty {
+                    if model.bottles.isEmpty && model.problems.isEmpty {
                         ContentUnavailableView("No Bottles", systemImage: "shippingbox", description: Text("Create a bottle for each game or launcher."))
                     }
                 }

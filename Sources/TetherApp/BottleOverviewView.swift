@@ -46,6 +46,7 @@ struct BottleOverviewView: View {
                     Text("Default (msync)").tag(SyncMode?.none)
                     ForEach(SyncMode.allCases, id: \.self) { Text($0.rawValue).tag(Optional($0)) }
                 }
+                runtimePicker
             }
             if let notes = bottle.config.profileID.flatMap(model.profiles.profile(id:))?.notes {
                 Section("Profile notes") { Text(notes).foregroundStyle(.secondary) }
@@ -88,6 +89,30 @@ struct BottleOverviewView: View {
         }
         .sheet(isPresented: $duplicating) {
             NamePromptSheet(title: "Duplicate Bottle", confirmLabel: "Duplicate", name: bottle.name + " copy") { model.duplicate(bottle, as: $0) }
+        }
+    }
+
+    // MARK: - runtime
+
+    /// Latest, or a specific version (how a bottle stays on, or goes back to, a runtime that worked).
+    @ViewBuilder private var runtimePicker: some View {
+        let pinned = bottle.config.runtimeVersion
+        let missing = pinned.map { v in !model.runtimes.contains { $0.version == v } } ?? false
+        Picker("Wine runtime", selection: binding(\.runtimeVersion)) {
+            Text("Latest available").tag(String?.none)
+            ForEach(model.runtimes.reversed(), id: \.version) { r in
+                Text("\(r.version) · Wine \(r.manifest.wineVersion)\(r.isEmbedded ? " · built in" : "")").tag(Optional(r.version))
+            }
+            if missing, let pinned { Text("\(pinned) · not installed").tag(Optional(pinned)) }
+        }
+        if missing, let pinned {
+            HStack {
+                Text("This bottle is set to runtime \(pinned), which isn't installed, so it can't start.")
+                    .font(.callout).foregroundStyle(.orange)
+                if let source = model.catalog.source(version: pinned) {
+                    Button("Install \(pinned)") { model.installRuntime(source) }.disabled(model.isInstallingRuntime)
+                }
+            }
         }
     }
 

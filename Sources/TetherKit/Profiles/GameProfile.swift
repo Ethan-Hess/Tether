@@ -75,7 +75,7 @@ public struct ProfileLibrary: Sendable {
 
     public static func load(paths: TetherPaths = .default) -> ProfileLibrary {
         var byID: [String: GameProfile] = [:]
-        let builtinDir = Bundle.module.url(forResource: "Profiles", withExtension: nil)
+        let builtinDir = TetherResources.kitURL(forResource: "Profiles")
         for dir in [builtinDir, paths.profiles].compactMap({ $0 }) {
             for profile in loadDirectory(dir) { byID[profile.id] = profile }
         }

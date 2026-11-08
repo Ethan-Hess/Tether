@@ -22,7 +22,7 @@
 # - Process command lines can contain environment details, so they are counted, never printed.
 # - Environment: TETHER (path to the tether binary), TETHER_HOME (as for the CLI).
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 TETHER="${TETHER:-$PWD/.build/debug/tether}"
 BOTTLE="steam-checklist"

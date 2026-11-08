@@ -1,0 +1,322 @@
+{
+  "components": [
+    {
+      "id": "tether",
+      "name": "Tether",
+      "group": "Tether",
+      "license": "LGPL-2.1-only",
+      "licenseFiles": [
+        "LGPL-2.1.txt"
+      ],
+      "sourceURL": "https://github.com/Ethan-Hess/Tether",
+      "basis": "the repository's LICENSE file",
+      "verified": true
+    },
+    {
+      "id": "sparkle",
+      "name": "Sparkle",
+      "group": "Updates",
+      "license": "MIT",
+      "licenseFiles": [
+        "MIT-Sparkle.txt"
+      ],
+      "sourceURL": "https://github.com/sparkle-project/Sparkle",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true,
+      "note": "Sparkle's licence file also lists the licences of the small components it bundles."
+    },
+    {
+      "id": "mach9",
+      "name": "Mach9",
+      "group": "Runtime engine",
+      "license": "Zlib",
+      "licenseFiles": [
+        "Zlib-Mach9.txt"
+      ],
+      "sourceURL": "https://github.com/athei/mach9",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true,
+      "version": "arm64-11.20-5",
+      "note": "Compatibility-rules library and loader glue. The runtime is Mach9's build, used unmodified."
+    },
+    {
+      "id": "wine",
+      "name": "Wine",
+      "group": "Runtime engine",
+      "license": "LGPL-2.1-or-later",
+      "licenseFiles": [
+        "LGPL-2.1.txt"
+      ],
+      "sourceURL": "https://github.com/athei/wine",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true,
+      "version": "11.20-33-g10f3ccc905",
+      "note": "Mach9's arm64 fork of Wine. Upstream: https://gitlab.winehq.org/wine/wine. Corresponding source for the shipped build: https://github.com/athei/mach9/releases/tag/arm64-11.20-5"
+    },
+    {
+      "id": "fex",
+      "name": "FEX",
+      "group": "Runtime engine",
+      "license": "MIT",
+      "licenseFiles": [
+        "MIT-FEX.txt"
+      ],
+      "sourceURL": "https://github.com/athei/FEX",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true,
+      "note": "Translates x86 code for the arm64 runtime."
+    },
+    {
+      "id": "dxmt",
+      "name": "DXMT",
+      "group": "Runtime engine",
+      "license": "LGPL-2.1-or-later",
+      "licenseFiles": [
+        "Notice-DXMT.txt",
+        "LGPL-2.1.txt"
+      ],
+      "sourceURL": "https://github.com/athei/dxmt",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true,
+      "note": "Direct3D 10/11 to Metal."
+    },
+    {
+      "id": "vkd3d-proton",
+      "name": "vkd3d-proton",
+      "group": "Runtime engine",
+      "license": "LGPL-2.1-or-later",
+      "licenseFiles": [
+        "Notice-vkd3d-proton.txt",
+        "LGPL-2.1.txt"
+      ],
+      "sourceURL": "https://github.com/athei/vkd3d-proton",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true,
+      "note": "Direct3D 12 to Vulkan."
+    },
+    {
+      "id": "mesa",
+      "name": "Mesa (including KosmicKrisp)",
+      "group": "Runtime engine",
+      "license": "MIT",
+      "licenseFiles": [
+        "MIT-Mesa.txt"
+      ],
+      "sourceURL": "https://github.com/athei/mesa",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true,
+      "note": "Most Mesa code is MIT; individual files can carry other licences (the fork ships Mesa's licenses/ folder and docs/license.rst). KosmicKrisp is part of Mesa."
+    },
+    {
+      "id": "ffmpeg",
+      "name": "FFmpeg (libavcodec, libavformat, libavutil, libavfilter, libswresample)",
+      "group": "Runtime libraries",
+      "license": "LGPL-2.1-or-later",
+      "licenseFiles": [
+        "LGPL-2.1.txt"
+      ],
+      "sourceURL": "https://ffmpeg.org/download.html",
+      "basis": "licence string read from the shipped libraries (each reports LGPL version 2.1 or later)",
+      "verified": true
+    },
+    {
+      "id": "gstreamer",
+      "name": "GStreamer",
+      "group": "Runtime libraries",
+      "license": "LGPL-2.1-or-later",
+      "licenseFiles": [
+        "LGPL-2.1.txt"
+      ],
+      "sourceURL": "https://gitlab.freedesktop.org/gstreamer/gstreamer",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true,
+      "version": "1.28.x"
+    },
+    {
+      "id": "glib",
+      "name": "GLib (glib, gobject, gio, gmodule)",
+      "group": "Runtime libraries",
+      "license": "LGPL-2.1-or-later",
+      "licenseFiles": [
+        "LGPL-2.1.txt"
+      ],
+      "sourceURL": "https://gitlab.gnome.org/GNOME/glib",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true
+    },
+    {
+      "id": "libffi",
+      "name": "libffi",
+      "group": "Runtime libraries",
+      "license": "MIT",
+      "licenseFiles": [
+        "MIT-libffi.txt"
+      ],
+      "sourceURL": "https://github.com/libffi/libffi",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true
+    },
+    {
+      "id": "brotli",
+      "name": "Brotli",
+      "group": "Runtime libraries",
+      "license": "MIT",
+      "licenseFiles": [
+        "MIT-brotli.txt"
+      ],
+      "sourceURL": "https://github.com/google/brotli",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true
+    },
+    {
+      "id": "libintl",
+      "name": "libintl (GNU gettext runtime)",
+      "group": "Runtime libraries",
+      "license": "LGPL-2.1-or-later",
+      "licenseFiles": [
+        "LGPL-2.1.txt"
+      ],
+      "sourceURL": "https://www.gnu.org/software/gettext/",
+      "basis": "Homebrew formula metadata (licence text is the standard text; not checked against the shipped source)",
+      "verified": false
+    },
+    {
+      "id": "vulkan-loader",
+      "name": "Vulkan Loader",
+      "group": "Runtime libraries",
+      "license": "Apache-2.0",
+      "licenseFiles": [
+        "Apache-2.0.txt"
+      ],
+      "sourceURL": "https://github.com/KhronosGroup/Vulkan-Loader",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true
+    },
+    {
+      "id": "freetype",
+      "name": "FreeType",
+      "group": "Runtime libraries",
+      "license": "FTL",
+      "licenseFiles": [
+        "FTL-FreeType.txt"
+      ],
+      "sourceURL": "https://freetype.org",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true,
+      "note": "FreeType is dual-licensed (FTL or GPL-2.0-or-later); Tether relies on the FreeType Licence."
+    },
+    {
+      "id": "gnutls",
+      "name": "GnuTLS",
+      "group": "Runtime libraries",
+      "license": "LGPL-2.1-or-later",
+      "licenseFiles": [
+        "LGPL-2.1.txt"
+      ],
+      "sourceURL": "https://gitlab.com/gnutls/gnutls",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true,
+      "note": "The library is LGPL; its command-line tools (not shipped) are GPL."
+    },
+    {
+      "id": "nettle",
+      "name": "Nettle and Hogweed",
+      "group": "Runtime libraries",
+      "license": "LGPL-3.0-or-later OR GPL-2.0-or-later",
+      "licenseFiles": [
+        "LGPL-3.0.txt"
+      ],
+      "sourceURL": "https://git.lysator.liu.se/nettle/nettle",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true,
+      "note": "Tether relies on the LGPL option."
+    },
+    {
+      "id": "gmp",
+      "name": "GMP",
+      "group": "Runtime libraries",
+      "license": "LGPL-3.0-or-later OR GPL-2.0-or-later",
+      "licenseFiles": [
+        "LGPL-3.0.txt"
+      ],
+      "sourceURL": "https://gmplib.org",
+      "basis": "Homebrew formula metadata (licence text is the standard text; not checked against the shipped source)",
+      "verified": false,
+      "note": "Tether relies on the LGPL option."
+    },
+    {
+      "id": "libidn2",
+      "name": "libidn2",
+      "group": "Runtime libraries",
+      "license": "GPL-2.0-or-later OR LGPL-3.0-or-later",
+      "licenseFiles": [
+        "LGPL-3.0.txt"
+      ],
+      "sourceURL": "https://gitlab.com/libidn/libidn2",
+      "basis": "Homebrew formula metadata (licence text is the standard text; not checked against the shipped source)",
+      "verified": false,
+      "note": "Tether relies on the LGPL option. Parts are under other licences (see the source)."
+    },
+    {
+      "id": "p11-kit",
+      "name": "p11-kit",
+      "group": "Runtime libraries",
+      "license": "BSD-3-Clause",
+      "licenseFiles": [
+        "BSD-3-Clause-p11-kit.txt"
+      ],
+      "sourceURL": "https://github.com/p11-glue/p11-kit",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true
+    },
+    {
+      "id": "libtasn1",
+      "name": "libtasn1",
+      "group": "Runtime libraries",
+      "license": "LGPL-2.1-or-later",
+      "licenseFiles": [
+        "LGPL-2.1.txt"
+      ],
+      "sourceURL": "https://www.gnu.org/software/libtasn1/",
+      "basis": "Homebrew formula metadata (licence text is the standard text; not checked against the shipped source)",
+      "verified": false
+    },
+    {
+      "id": "libunistring",
+      "name": "libunistring",
+      "group": "Runtime libraries",
+      "license": "GPL-2.0-or-later OR LGPL-3.0-or-later",
+      "licenseFiles": [
+        "LGPL-3.0.txt"
+      ],
+      "sourceURL": "https://www.gnu.org/software/libunistring/",
+      "basis": "Homebrew formula metadata (licence text is the standard text; not checked against the shipped source)",
+      "verified": false,
+      "note": "Tether relies on the LGPL option."
+    },
+    {
+      "id": "libpng",
+      "name": "libpng",
+      "group": "Runtime libraries",
+      "license": "libpng-2.0",
+      "licenseFiles": [
+        "libpng-2.0.txt"
+      ],
+      "sourceURL": "https://github.com/pnggroup/libpng",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true
+    },
+    {
+      "id": "sdl",
+      "name": "SDL2 (via sdl2-compat) and SDL3",
+      "group": "Runtime libraries",
+      "license": "Zlib",
+      "licenseFiles": [
+        "Zlib-SDL.txt"
+      ],
+      "sourceURL": "https://github.com/libsdl-org/SDL",
+      "basis": "licence file in the upstream or fork repository",
+      "verified": true
+    }
+  ]
+}
