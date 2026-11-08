@@ -90,6 +90,33 @@ public struct BottleStore: Sendable {
         try data.write(to: bottle.configURL, options: .atomic)
     }
 
+    /// Renames a bottle's directory. The Wine prefix keeps working: Wine records no absolute
+    /// path to itself that matters for launching, and `WINEPREFIX` is set from the new location.
+    @discardableResult
+    public func rename(from old: String, to new: String) throws -> Bottle {
+        try Self.validate(name: new)
+        let source = try load(name: old)
+        let destination = url(for: new)
+        guard !FileManager.default.fileExists(atPath: destination.path) else { throw BottleStoreError.alreadyExists(new) }
+        try FileManager.default.moveItem(at: source.root, to: destination)
+        return try load(name: new)
+    }
+
+    /// Copies a whole bottle (prefix, caches and config) under a new name.
+    @discardableResult
+    public func duplicate(name: String, as copy: String) throws -> Bottle {
+        try Self.validate(name: copy)
+        let source = try load(name: name)
+        let destination = url(for: copy)
+        guard !FileManager.default.fileExists(atPath: destination.path) else { throw BottleStoreError.alreadyExists(copy) }
+        try FileManager.default.copyItem(at: source.root, to: destination)
+        return try load(name: copy)
+    }
+
+    public func exists(name: String) -> Bool {
+        FileManager.default.fileExists(atPath: url(for: name).path)
+    }
+
     public func delete(name: String) throws {
         try Self.validate(name: name)
         let root = url(for: name)

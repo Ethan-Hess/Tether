@@ -171,23 +171,14 @@ struct Env: ParsableCommand {
 }
 
 func printBackendNotice(_ plan: LaunchPlan) {
-    if let ignored = plan.ignoredBackendChoice {
-        let why = plan.runtime.supports(feature: GraphicsBackends.compatRulesFeature)
-            ? "it offers dxmt and wined3d"
-            : "it chooses the backend itself"
-        FileHandle.standardError.write("note: the bottle's '\(ignored.rawValue)' backend can't be applied with this runtime (\(why)), so the setting has no effect\n".data(using: .utf8)!)
-    }
-    if plan.compatRules.disablesD3D12 {
-        FileHandle.standardError.write("note: wined3d has no Direct3D 12, so games that need it won't start with this backend\n".data(using: .utf8)!)
+    for line in LaunchNotices.backendNotices(plan) {
+        FileHandle.standardError.write((line + "\n").data(using: .utf8)!)
     }
 }
 
 func printPolicyWarnings(_ env: LaunchEnvironment) {
-    for o in env.rejectedOverrides {
-        FileHandle.standardError.write("warning: DLL override '\(o.dll)' blocked by policy (docs/adr/0003-no-process-injection.md)\n".data(using: .utf8)!)
-    }
-    for k in env.rejectedEnvironmentKeys {
-        FileHandle.standardError.write("warning: environment key '\(k)' is protected and was ignored\n".data(using: .utf8)!)
+    for line in LaunchNotices.policyWarnings(env) {
+        FileHandle.standardError.write((line + "\n").data(using: .utf8)!)
     }
 }
 

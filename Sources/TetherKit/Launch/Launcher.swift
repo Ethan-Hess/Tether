@@ -129,8 +129,11 @@ public struct Launcher: Sendable {
     }
 
     /// Prepares the prefix (first-run init, backend DLLs) and starts the process.
+    ///
+    /// - Parameter onExit: called with the exit status when the process ends. It is installed
+    ///   before the process starts, so a process that exits immediately is still reported.
     @discardableResult
-    public func launch(_ plan: LaunchPlan) throws -> Process {
+    public func launch(_ plan: LaunchPlan, onExit: (@Sendable (Int32) -> Void)? = nil) throws -> Process {
         // First, so even the first-run prefix setup finds the file the environment points at.
         try writeCompatRules(plan)
         if !isPrefixInitialized(plan.bottle) {
@@ -145,6 +148,9 @@ public struct Launcher: Sendable {
             workingDirectory: plan.workingDirectory,
             log: plan.environment.variables["WINEDEBUG"] == "-all" ? nil : logFile(for: plan.bottle)
         )
+        if let onExit {
+            process.terminationHandler = { onExit($0.terminationStatus) }
+        }
         try process.run()
         TetherLog.launch.info("Launched \(plan.arguments.first ?? "?", privacy: .public) in \(plan.bottle.name, privacy: .public) via \(plan.environment.backend.id.rawValue, privacy: .public)")
         return process

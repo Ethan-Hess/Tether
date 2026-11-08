@@ -32,6 +32,10 @@ public struct SystemCheck: Sendable {
 
     public let items: [Item]
 
+    public init(items: [Item]) {
+        self.items = items
+    }
+
     public static func run(paths: TetherPaths = .default) -> SystemCheck {
         let fm = FileManager.default
         var items: [Item] = []
