@@ -1,6 +1,7 @@
-name: Update Homebrew tap
+name: Update Homebrew cask
 
-# When a release is published, render the cask for it and commit it to the tap repository.
+# This repository is also the Homebrew tap (users run `brew tap ethan-hess/tether <this repo's URL>`).
+# When a release is published, render the cask for it and commit Casks/tether.rb to the default branch.
 # (Publishing by hand triggers this; a release made with the workflow's own token would not.)
 on:
   release:
@@ -8,8 +9,13 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Release tag to put in the tap (for example v0.1.0)
+        description: Release tag to put in the cask (for example v0.1.0)
         required: true
+
+# One cask update at a time.
+concurrency:
+  group: cask-update
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -30,38 +36,43 @@ jobs:
           fi
           echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
 
-      # The cask template is read from the release's own commit.
+      # The cask template and script come from the release's own commit.
       - uses: actions/checkout@v7
         with:
           ref: ${{ env.TAG }}
+          path: release
 
       - name: Hash the released DMG
         run: |
-          gh release download "$TAG" --pattern "Tether-$VERSION.dmg" --dir dl
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "Tether-$VERSION.dmg" --dir dl
           echo "SHA256=$(shasum -a 256 "dl/Tether-$VERSION.dmg" | cut -d' ' -f1)" >> "$GITHUB_ENV"
 
       - name: Render the cask
         run: |
-          ./scripts/render-cask.sh "$VERSION" "$SHA256" > tether.rb
+          ./release/scripts/render-cask.sh "$VERSION" "$SHA256" > tether.rb
           ruby -c tether.rb
           cat tether.rb
 
+      # A token that can push to the protected default branch (the admin's fine-grained token for this
+      # repository, "Contents: read and write"). The workflow's own token can't: branch protection
+      # requires checks, and a bot commit can't have passed them yet.
       - uses: actions/checkout@v7
         with:
-          repository: Ethan-Hess/homebrew-tether
+          ref: ${{ github.event.repository.default_branch }}
           token: ${{ secrets.TAP_TOKEN }}
           path: tap
 
-      - name: Commit to the tap
+      - name: Commit the cask
         working-directory: tap
         run: |
           mkdir -p Casks
           cp ../tether.rb Casks/tether.rb
           if git diff --quiet -- Casks/tether.rb && git ls-files --error-unmatch Casks/tether.rb > /dev/null 2>&1; then
-            echo "The tap already has this version."; exit 0
+            echo "The cask already has this version."; exit 0
           fi
           git config user.name "tether-release"
           git config user.email "tether-release@users.noreply.github.com"
           git add Casks/tether.rb
-          git commit -m "tether $VERSION"
-          git push
+          git commit -m "Cask: tether $VERSION"
+          git pull --rebase origin "${{ github.event.repository.default_branch }}"
+          git push origin "HEAD:${{ github.event.repository.default_branch }}"

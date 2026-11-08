@@ -70,7 +70,7 @@ swift run tether env steam 'C:\Program Files (x86)\Steam\Steam.exe'   # inspect 
 Install with Homebrew once a release is published:
 
 ```sh
-brew tap ethan-hess/tether
+brew tap ethan-hess/tether https://github.com/Ethan-Hess/Tether
 brew install --cask tether
 ```
 

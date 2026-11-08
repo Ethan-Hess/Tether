@@ -134,7 +134,7 @@ Steam checklist: `scripts/steam-checklist.sh --app <id> --game-process <regex>` 
 - [x] **App updates** via Sparkle 2 (EdDSA-signed appcast on the latest GitHub release, binary deltas; `scripts/release.sh`, [docs/RELEASING.md](docs/RELEASING.md)). Appcast signatures are verified; installing an update through the dialogs is still to be tested. A separate runtime channel is not planned.
 - [x] **Rollback:** a bottle can pin a runtime version and Settings installs older catalog versions. (The embedded runtime itself changes only with the app.)
 - [x] **Bottle schema migrations:** `BottleMigrator` with backups and a refusal for newer files (no migrations yet: format 1 is the only one). Unreadable bottles are listed, not hidden.
-- [x] **Homebrew tap** (`brew tap ethan-hess/tether`; set up, and goes live with the first published release, after which it updates automatically; see [docs/RELEASING.md](docs/RELEASING.md)). The official `homebrew-cask` requires a notarized app, so that waits for a Developer ID certificate.
+- [x] **Homebrew tap** (this repository is the tap: `brew tap ethan-hess/tether https://github.com/Ethan-Hess/Tether`; set up, and goes live with the first published release, after which it updates automatically; see [docs/RELEASING.md](docs/RELEASING.md)). The official `homebrew-cask` requires a notarized app, so that waits for a Developer ID certificate.
 - [ ] **Reproducible builds:** pinned toolchains and documented build hashes.
 - [ ] **License compliance:** an SBOM per runtime release, LGPL source links for Wine and its patches, and a third-party notices screen in the app.
 - [ ] **Security review** of the launch-policy boundary and the update pipeline.

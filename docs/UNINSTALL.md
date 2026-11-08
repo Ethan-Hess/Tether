@@ -17,7 +17,7 @@ Stop every bottle first; the app refuses while something is running.
 
 Then drag **Tether.app** to the Trash.
 
-If you installed with Homebrew: `brew uninstall --cask tether` removes the app. Add `--zap` to also delete the data listed below, **including your bottles** (installed games and saves), so only do that if you mean it.
+If you installed with Homebrew: `brew uninstall --cask tether` removes the app (and `brew untap ethan-hess/tether` removes the tap). Add `--zap` to also delete the data listed below, **including your bottles** (installed games and saves), so only do that if you mean it.
 
 ## By hand
 

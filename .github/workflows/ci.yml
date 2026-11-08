@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      install_cask:
+        description: Also install the published cask, check it, and uninstall it
+        type: boolean
+        default: false
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -80,6 +85,48 @@ jobs:
           path: build/Tether-no-runtime.zip
           retention-days: 7
           if-no-files-found: error
+
+  cask:
+    name: cask
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_INSTALL_FROM_API: "1"
+      HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # The template is checked on every run, before any release has produced a real cask.
+      - name: Check the cask template
+        run: |
+          ./scripts/render-cask.sh 0.0.0 "$(printf '0%.0s' {1..64})" > "$RUNNER_TEMP/tether.rb"
+          ruby -c "$RUNNER_TEMP/tether.rb"
+          brew tap-new --no-git ci/tether-check
+          mkdir -p "$(brew --repository ci/tether-check)/Casks"
+          cp "$RUNNER_TEMP/tether.rb" "$(brew --repository ci/tether-check)/Casks/tether.rb"
+          brew style ci/tether-check
+          brew audit --cask --strict ci/tether-check/tether
+
+      # This repository is the tap: once a release has committed Casks/tether.rb, check it for real.
+      - name: Check the published cask
+        if: hashFiles('Casks/tether.rb') != ''
+        run: |
+          brew tap ethan-hess/tether "$GITHUB_WORKSPACE"
+          brew style ethan-hess/tether
+          brew audit --cask --online --strict ethan-hess/tether/tether
+
+      # Heavier: downloads the DMG (~200 MB) and installs it. macOS quarantines the app, so this only
+      # checks that it installs, is signed consistently, and removes cleanly.
+      - name: Install smoke test
+        if: hashFiles('Casks/tether.rb') != '' && github.event_name == 'workflow_dispatch' && inputs.install_cask
+        run: |
+          brew install --cask ethan-hess/tether/tether
+          test -d /Applications/Tether.app
+          codesign --verify --strict /Applications/Tether.app
+          test -d /Applications/Tether.app/Contents/Resources/EmbeddedRuntimes
+          brew uninstall --cask ethan-hess/tether/tether
+          test ! -e /Applications/Tether.app
 
   lint:
     name: lint
