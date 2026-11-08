@@ -1,7 +1,10 @@
 name: Update Homebrew cask
 
 # This repository is also the Homebrew tap (users run `brew tap ethan-hess/tether <this repo's URL>`).
-# When a release is published, render the cask for it and commit Casks/tether.rb to the default branch.
+# When a release is published, render the cask for it and open a pull request that adds it to
+# Casks/tether.rb. Pull requests opened with the workflow's own token don't start CI by themselves,
+# so this workflow starts CI on the PR's branch by hand; those results attach to the pull request and
+# satisfy the required checks. Then merge the PR.
 # (Publishing by hand triggers this; a release made with the workflow's own token would not.)
 on:
   release:
@@ -25,9 +28,14 @@ jobs:
     if: ${{ !github.event.release.prerelease }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: write       # push the cask branch
+      pull-requests: write  # open the pull request
+      actions: write        # start CI on that branch
     env:
       TAG: ${{ github.event.release.tag_name || inputs.tag }}
       GH_TOKEN: ${{ github.token }}
+      BASE: ${{ github.event.repository.default_branch }}
     steps:
       - name: Check the tag
         run: |
@@ -35,6 +43,7 @@ jobs:
             echo "::error::'$TAG' must look like v1.2.3"; exit 1
           fi
           echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+          echo "BRANCH=cask/tether-${TAG#v}" >> "$GITHUB_ENV"
 
       # The cask template and script come from the release's own commit.
       - uses: actions/checkout@v7
@@ -53,26 +62,44 @@ jobs:
           ruby -c tether.rb
           cat tether.rb
 
-      # A token that can push to the protected default branch (the admin's fine-grained token for this
-      # repository, "Contents: read and write"). The workflow's own token can't: branch protection
-      # requires checks, and a bot commit can't have passed them yet.
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.event.repository.default_branch }}
-          token: ${{ secrets.TAP_TOKEN }}
+          ref: ${{ env.BASE }}
           path: tap
 
-      - name: Commit the cask
+      - name: Commit the cask to a branch
+        id: commit
         working-directory: tap
         run: |
           mkdir -p Casks
           cp ../tether.rb Casks/tether.rb
           if git diff --quiet -- Casks/tether.rb && git ls-files --error-unmatch Casks/tether.rb > /dev/null 2>&1; then
-            echo "The cask already has this version."; exit 0
+            echo "The cask already has this version."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
           git config user.name "tether-release"
           git config user.email "tether-release@users.noreply.github.com"
+          git checkout -b "$BRANCH"
           git add Casks/tether.rb
           git commit -m "Cask: tether $VERSION"
-          git pull --rebase origin "${{ github.event.repository.default_branch }}"
-          git push origin "HEAD:${{ github.event.repository.default_branch }}"
+          # The branch belongs to this workflow, so a re-run may replace it.
+          git push --force origin "HEAD:refs/heads/$BRANCH"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Open the pull request
+        if: steps.commit.outputs.changed == 'true'
+        working-directory: tap
+        run: |
+          if [[ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')" ]]; then
+            echo "A pull request for $BRANCH is already open."
+          else
+            gh pr create --base "$BASE" --head "$BRANCH" \
+              --title "Cask: tether $VERSION" \
+              --body "Adds the Homebrew cask for release $TAG (SHA-256 \`$SHA256\`), generated from \`Packaging/homebrew/tether.rb.in\` by the *Update Homebrew cask* workflow. CI is started on this branch by hand because pull requests opened by a workflow don't trigger it. Merge when the checks pass."
+          fi
+
+      # Events caused by the workflow token don't start workflows, except workflow_dispatch.
+      - name: Start CI on the branch
+        if: steps.commit.outputs.changed == 'true'
+        run: gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"

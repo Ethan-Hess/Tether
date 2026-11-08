@@ -10,7 +10,7 @@ A release is a DMG plus a Sparkle appcast on a GitHub release. The app checks th
    - **build** (no secrets): checks the tag against `VERSION`, runs the tests, builds `Tether.app` with the runtime embedded (downloaded and checked against its pinned SHA-256), runs `scripts/verify-app.sh`, makes the DMG, and attests its build provenance.
    - **publish** (waits for your approval in the `release` environment, the only place the update-signing key exists): signs the appcast (with deltas from the previous release) and creates a **draft** release containing the DMG, `appcast.xml` and any `.delta` files.
 4. Review the draft: download the DMG, check it opens and runs (Open Anyway applies to ad-hoc builds), look at the notes.
-5. **Publish** the release. That switches the update feed and triggers `homebrew.yml`, which commits the new `Casks/tether.rb` (version and the DMG's SHA-256) to `main` of this repository.
+5. **Publish** the release. That switches the update feed and triggers `homebrew.yml`, which opens a pull request adding the new `Casks/tether.rb` (version and the DMG's SHA-256) and starts CI on its branch by hand. **Merge that pull request** once its checks pass: until you do, `brew install` still gets the previous version.
 
 Until you publish, nothing changes for users. A full run takes roughly 15 to 30 minutes on GitHub's runners, mostly DMG compression.
 
@@ -20,7 +20,7 @@ Run **Actions → Release → Run workflow** on any branch. It builds, verifies 
 
 ### Pull request checks
 
-`ci.yml` runs on every PR and push to `main`: the test suite on macOS 15 and 26, a release build of every product, a bundle build with `verify-app.sh`, a `cask` job that renders the cask template and runs `brew style` and `brew audit` on it (and on the real `Casks/tether.rb` once a release has created it), and linting of scripts, JSON and workflows. Branch protection on `main` requires `test (macos-15)`, `test (macos-26)`, `app-bundle` and `lint`. Run **CI → Run workflow** with *install_cask* ticked to also install the published cask on a runner and uninstall it again.
+`ci.yml` runs on every PR and push to `main`: the test suite on macOS 15 and 26, a release build of every product, a bundle build with `verify-app.sh`, a `cask` job that renders the cask template and runs `brew style` and `brew audit` on it (and on the real `Casks/tether.rb` once a release has created it), and linting of scripts, JSON and workflows. `main` is protected: pull requests must pass `test (macos-15)`, `test (macos-26)`, `app-bundle` and `lint` (the `cask` check runs but isn't required, because it depends on Homebrew's own tooling). Administrators aren't enforced, so you can still merge by hand if CI itself is broken. Run **CI → Run workflow** with *install_cask* ticked to also install the published cask on a runner and uninstall it again.
 
 ## One-time setup
 
@@ -50,7 +50,13 @@ printf '{"reviewers":[{"type":"User","id":%s}],"deployment_branch_policy":{"prot
 gh api -X POST repos/Ethan-Hess/Tether/environments/release/deployment-branch-policies -f name='v*' -f type=tag
 ```
 
-**Cask token.** `homebrew.yml` commits the cask to `main` with `TAP_TOKEN`: a *fine-grained personal access token* created in GitHub's web UI (Settings → Developer settings), limited to **this repository** with *Contents: read and write*. Then `gh secret set TAP_TOKEN` (a repository secret). It has to be your own token: `main` is protected by required checks, and a bot commit can't have passed them yet, so the push relies on you being an administrator and on branch protection not being enforced for administrators. Anyone with this token can push to `main`; keep it to this one repository, give it an expiry, and renew it.
+**Let workflows open pull requests.** `homebrew.yml` proposes the cask change as a pull request, using the workflow's own token (no personal token). GitHub switches that off by default, so turn it on once (Settings → Actions → General → "Allow GitHub Actions to create and approve pull requests"):
+
+```sh
+gh api -X PUT repos/Ethan-Hess/Tether/actions/permissions/workflow -f default_workflow_permissions=read -F can_approve_pull_request_reviews=true
+```
+
+Pull requests opened by a workflow don't start CI on their own, so the workflow runs `ci.yml` on the PR's branch by hand (`workflow_dispatch` is the one event the workflow token may trigger); those check runs attach to the PR and satisfy the required checks. If they ever don't, run **Actions → CI → Run workflow** on the `cask/tether-X.Y.Z` branch.
 
 **Signing (optional until you have a certificate).** Without a Developer ID, builds are ad-hoc signed and users approve "Open Anyway" once. Updates installed by Sparkle don't carry the download quarantine, so that approval isn't repeated per update. Homebrew installs the same ad-hoc app quarantined, so brew users see the same prompt (the cask doesn't strip it). Because the tap is this repository rather than a `homebrew-tether` repository, users tap it with its URL (`brew tap ethan-hess/tether https://github.com/Ethan-Hess/Tether`) and install with the full name (`brew install --cask ethan-hess/tether/tether`). Homebrew 6+ only loads casks from trusted taps; the full-name install trusts just that cask, and `brew trust --cask ethan-hess/tether/tether` does it explicitly. The official `homebrew-cask` requires a notarized app, so submitting there waits for a certificate.
 
@@ -63,7 +69,7 @@ To sign and notarize once you have a *Developer ID Application* certificate (the
 ## Rolling back a bad release
 
 - **Not yet published:** delete the draft.
-- **Published:** Sparkle only moves forward, so ship a fixed newer version. To stop *new* downloads right away, unpublish or delete the release (the feed then falls back to the previous release) and revert the cask commit on `main`. Copies that already updated stay updated.
+- **Published:** Sparkle only moves forward, so ship a fixed newer version. To stop *new* downloads right away, unpublish or delete the release (the feed then falls back to the previous release) and revert the merged cask pull request (or close it if it is still open). Copies that already updated stay updated.
 
 ## Testing an update
 
@@ -86,5 +92,5 @@ TETHER_FEED_URL=http://localhost:8123/appcast.xml open -a Tether     # Tether me
 ## After release
 
 - Confirm `https://github.com/Ethan-Hess/Tether/releases/latest/download/appcast.xml` serves the new appcast.
-- Confirm the cask landed: `Casks/tether.rb` on `main`, then `brew tap ethan-hess/tether https://github.com/Ethan-Hess/Tether && brew trust --cask ethan-hess/tether/tether && brew info --cask ethan-hess/tether/tether`.
+- Confirm the cask pull request was merged and `Casks/tether.rb` is on `main`, then `brew tap ethan-hess/tether https://github.com/Ethan-Hess/Tether && brew trust --cask ethan-hess/tether/tether && brew info --cask ethan-hess/tether/tether`.
 - Old DMGs and deltas stay in `build/release/old_updates/` on a local release; don't upload those.
