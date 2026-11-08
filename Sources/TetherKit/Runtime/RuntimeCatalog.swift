@@ -32,7 +32,7 @@ public struct RuntimeCatalog: Codable, Sendable {
 
     /// The catalog bundled with TetherKit.
     public static func bundled() -> RuntimeCatalog {
-        guard let url = Bundle.module.url(forResource: "catalog", withExtension: "json", subdirectory: "Runtimes"),
+        guard let url = TetherResources.kitURL(forResource: "catalog", withExtension: "json", subdirectory: "Runtimes"),
               let data = try? Data(contentsOf: url),
               let catalog = try? JSONDecoder().decode(RuntimeCatalog.self, from: data)
         else {

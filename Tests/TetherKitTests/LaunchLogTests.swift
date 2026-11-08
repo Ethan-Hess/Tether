@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TetherKit
 
-@Suite struct LaunchLogTests {
+@Suite(.timeLimit(.minutes(1))) struct LaunchLogTests {
     let home = TempHome()
 
     @Test func splitsSessionsOnMarkers() {
@@ -68,8 +68,9 @@ import Testing
 
         let launcher = Launcher(paths: home.paths, profiles: ProfileLibrary(profiles: []))
         let plan = try launcher.plan(LaunchRequest(bottle: bottle, executable: "C:\\games\\Game.exe", debug: true))
-        await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
-            _ = try? launcher.launch(plan) { _ in c.resume() }
+        // A launch that fails must fail the test, not leave it waiting forever.
+        try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in
+            do { _ = try launcher.launch(plan) { _ in c.resume() } } catch { c.resume(throwing: error) }
         }
         let s = LaunchLog.sessions(for: bottle)
         #expect(s.count == 1)

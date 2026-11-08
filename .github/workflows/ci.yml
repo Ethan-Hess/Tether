@@ -1,0 +1,166 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      install_cask:
+        description: Also install the published cask, check it, and uninstall it
+        type: boolean
+        default: false
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # Swift Testing needs Xcode 16+, which rules out macos-14's default image.
+        os: [macos-15, macos-26]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Toolchain
+        id: tc
+        run: |
+          swift --version
+          xcodebuild -version
+          echo "xcode=$(xcodebuild -version | tr -s ' \n' '--')" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v6
+        with:
+          path: .build
+          key: spm-${{ matrix.os }}-${{ steps.tc.outputs.xcode }}-${{ hashFiles('Package.swift', 'Package.resolved') }}
+          restore-keys: spm-${{ matrix.os }}-${{ steps.tc.outputs.xcode }}-
+
+      # The suite takes seconds. The step timeout turns any future hang into a quick failure, and
+      # the slow suites carry their own time limits so the log names the stuck test.
+      - name: Tests
+        timeout-minutes: 10
+        run: ./scripts/test.sh
+
+      - name: Release build of every product
+        run: swift build -c release
+
+  app-bundle:
+    name: app-bundle
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the build number is the commit count
+
+      - name: Toolchain
+        id: tc
+        run: echo "xcode=$(xcodebuild -version | tr -s ' \n' '--')" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v6
+        with:
+          path: .build
+          key: spm-bundle-${{ steps.tc.outputs.xcode }}-${{ hashFiles('Package.swift', 'Package.resolved') }}
+          restore-keys: spm-bundle-${{ steps.tc.outputs.xcode }}-
+
+      - name: Build Tether.app (without the 1 GB runtime)
+        run: ./scripts/package-app.sh --no-runtime
+
+      - name: Verify the bundle
+        run: ./scripts/verify-app.sh build/Tether.app
+
+      - name: Zip the app
+        run: ditto -c -k --keepParent build/Tether.app build/Tether-no-runtime.zip
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Tether-no-runtime
+          path: build/Tether-no-runtime.zip
+          retention-days: 7
+          if-no-files-found: error
+
+  cask:
+    name: cask
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # `brew style` shells out to shellcheck, so have it before developer mode (turned on by the
+      # developer commands below) changes how Homebrew finds formulae.
+      - name: Install shellcheck
+        run: brew install shellcheck
+
+      # The template is checked on every run, before any release has produced a real cask.
+      - name: Check the cask template
+        run: |
+          ./scripts/render-cask.sh 0.0.0 "$(printf '0%.0s' {1..64})" > "$RUNNER_TEMP/tether.rb"
+          ruby -c "$RUNNER_TEMP/tether.rb"
+          brew tap-new --no-git ci/tether-check
+          mkdir -p "$(brew --repository ci/tether-check)/Casks"
+          cp "$RUNNER_TEMP/tether.rb" "$(brew --repository ci/tether-check)/Casks/tether.rb"
+          brew style ci/tether-check
+          # Homebrew 6+ refuses to load a cask from an untrusted tap, even for an audit.
+          brew trust --cask ci/tether-check/tether
+          brew audit --cask --strict ci/tether-check/tether
+
+      # This repository is the tap: once a release has committed Casks/tether.rb, check it for real.
+      - name: Check the published cask
+        if: hashFiles('Casks/tether.rb') != ''
+        run: |
+          brew tap ethan-hess/tether "$GITHUB_WORKSPACE"
+          brew style ethan-hess/tether
+          brew trust --cask ethan-hess/tether/tether
+          brew audit --cask --online --strict ethan-hess/tether/tether
+
+      # Heavier: downloads the DMG (~200 MB) and installs it the way the README tells users to (the
+      # fully qualified name, which Homebrew 6+ takes as trusting that one cask). macOS quarantines
+      # the app, so this only checks that it installs, is signed consistently, and removes cleanly.
+      - name: Install smoke test
+        if: hashFiles('Casks/tether.rb') != '' && github.event_name == 'workflow_dispatch' && inputs.install_cask
+        run: |
+          brew tap ethan-hess/tether "$GITHUB_WORKSPACE"
+          brew install --cask ethan-hess/tether/tether
+          test -d /Applications/Tether.app
+          codesign --verify --strict /Applications/Tether.app
+          test -d /Applications/Tether.app/Contents/Resources/EmbeddedRuntimes
+          brew uninstall --cask ethan-hess/tether/tether
+          test ! -e /Applications/Tether.app
+
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Shell scripts
+        run: |
+          for f in scripts/*.sh; do bash -n "$f"; done
+          shellcheck --severity=warning scripts/*.sh
+
+      - name: JSON files
+        run: |
+          for f in Sources/TetherKit/Resources/Runtimes/catalog.json \
+                   Sources/TetherKit/Resources/Notices/components.json \
+                   Sources/TetherKit/Resources/Profiles/*.json; do
+            python3 -m json.tool "$f" > /dev/null || { echo "invalid JSON: $f"; exit 1; }
+          done
+
+      - name: Workflows
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          "$(go env GOPATH)/bin/actionlint"

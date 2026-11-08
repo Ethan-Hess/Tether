@@ -15,11 +15,20 @@ public enum BottleStoreError: Error, LocalizedError, Equatable {
 }
 
 /// CRUD for bottles on disk. Does not run Wine; see `Launcher.initializePrefix` for that.
+/// A bottle folder that exists but can't be opened (damaged or from a newer Tether).
+public struct BottleProblem: Identifiable, Hashable, Sendable {
+    public var id: String { name }
+    public let name: String
+    public let message: String
+}
+
 public struct BottleStore: Sendable {
     public let paths: TetherPaths
+    public let migrator: BottleMigrator
 
-    public init(paths: TetherPaths = .default) {
+    public init(paths: TetherPaths = .default, migrator: BottleMigrator = .standard) {
         self.paths = paths
+        self.migrator = migrator
     }
 
     private static let encoder: JSONEncoder = {
@@ -49,12 +58,29 @@ public struct BottleStore: Sendable {
     }
 
     public func list() throws -> [Bottle] {
+        try listWithProblems().bottles
+    }
+
+    /// Bottles that open, plus folders that look like bottles but can't be opened. Nothing is
+    /// hidden: the caller can show the problems instead of a bottle silently going missing.
+    public func listWithProblems() throws -> (bottles: [Bottle], problems: [BottleProblem]) {
         let fm = FileManager.default
-        guard fm.fileExists(atPath: paths.bottles.path) else { return [] }
+        guard fm.fileExists(atPath: paths.bottles.path) else { return ([], []) }
         let entries = try fm.contentsOfDirectory(at: paths.bottles, includingPropertiesForKeys: nil)
-        return entries
-            .compactMap { try? load(name: $0.lastPathComponent) }
-            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        var bottles: [Bottle] = []
+        var problems: [BottleProblem] = []
+        for entry in entries {
+            let name = entry.lastPathComponent
+            guard fm.fileExists(atPath: entry.appendingPathComponent("bottle.json").path) else { continue }
+            do {
+                bottles.append(try load(name: name))
+            } catch {
+                problems.append(BottleProblem(name: name, message: error.localizedDescription))
+            }
+        }
+        bottles.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        problems.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        return (bottles, problems)
     }
 
     public func load(name: String) throws -> Bottle {
@@ -64,7 +90,15 @@ public struct BottleStore: Sendable {
         guard FileManager.default.fileExists(atPath: configURL.path) else {
             throw BottleStoreError.notFound(name)
         }
-        let config = try Self.decoder.decode(BottleConfig.self, from: Data(contentsOf: configURL))
+        var data = try Data(contentsOf: configURL)
+        if let migrated = try migrator.migrate(data) {
+            // Keep the original next to the upgraded file, then replace it atomically.
+            let backup = root.appendingPathComponent("bottle.json.v\(migrated.from).bak")
+            if !FileManager.default.fileExists(atPath: backup.path) { try data.write(to: backup) }
+            try migrated.data.write(to: configURL, options: .atomic)
+            data = migrated.data
+        }
+        let config = try Self.decoder.decode(BottleConfig.self, from: data)
         return Bottle(name: name, root: root, config: config)
     }
 

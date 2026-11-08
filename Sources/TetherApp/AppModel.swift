@@ -28,6 +28,8 @@ final class AppModel {
     let catalog = RuntimeCatalog.bundled()
 
     var bottles: [Bottle] = []
+    /// Bottle folders that exist but can't be opened (damaged, or made by a newer Tether).
+    var problems: [BottleProblem] = []
     var selection: Bottle.ID?
     var runtimes: [WineRuntime] = []
     var system = SystemCheck(items: [])
@@ -75,7 +77,11 @@ final class AppModel {
     // MARK: - state
 
     func reload() {
-        do { bottles = try store.list() } catch { fail("Couldn't read bottles", error) }
+        do {
+            let found = try store.listWithProblems()
+            bottles = found.bottles
+            problems = found.problems
+        } catch { fail("Couldn't read bottles", error) }
     }
 
     func refreshSystem() {
@@ -208,7 +214,7 @@ final class AppModel {
             var steamPID: Int32?
             var exitWatcher: ProcessExitWatcher?
             var reader: SteamGameProcessLog.Reader?
-            let startOffset = await self?.launchOffsets[key] // nil: already running, read the session
+            let startOffset = self?.launchOffsets[key] // nil: already running, read the session
             defer { logWatcher.cancel(); exitWatcher?.cancel() }
 
             while !Task.isCancelled {
@@ -271,7 +277,7 @@ final class AppModel {
 
     func diagnostics(for bottle: Bottle, sessions: [LaunchLog.Session]) -> String {
         let runtime = try? RuntimeStore(paths: paths).resolve(version: bottle.config.runtimeVersion)
-        return DiagnosticsReport.make(bottle: bottle, runtime: runtime, system: system, sessions: sessions)
+        return DiagnosticsReport.make(bottle: bottle, runtime: runtime, system: system, sessions: sessions, appVersion: AppInfo.display)
     }
 
     func copyToPasteboard(_ text: String) {
@@ -292,8 +298,18 @@ final class AppModel {
 
     // MARK: - runtime
 
-    func installRuntime() {
-        guard let source = runtimeSource, !isInstallingRuntime else { return }
+    /// Catalog runtimes that aren't available yet (not built in, not installed), newest first.
+    var installableRuntimes: [RuntimeSource] {
+        let have = Set(runtimes.map(\.version))
+        return catalog.runtimes
+            .filter { !have.contains($0.version) }
+            .sorted { $0.version.compare($1.version, options: .numeric) == .orderedDescending }
+    }
+
+    /// Installs a catalog runtime (the newest by default). Older ones are how a bottle goes back
+    /// to a runtime it worked with.
+    func installRuntime(_ source: RuntimeSource? = nil) {
+        guard let source = source ?? runtimeSource, !isInstallingRuntime else { return }
         isInstallingRuntime = true
         Task {
             defer { isInstallingRuntime = false }
@@ -304,6 +320,35 @@ final class AppModel {
             } catch {
                 fail("Couldn't install the runtime", error)
             }
+            refreshSystem()
+        }
+    }
+
+    // MARK: - removing data
+
+    var isRemovingData = false
+
+    /// Deletes the chosen kinds of Tether data. Refuses while anything is running, because a
+    /// running game or installer has files open inside the bottle.
+    func removeData(_ categories: Set<TetherDataCategory>) {
+        guard !categories.isEmpty, !isRemovingData else { return }
+        guard runningBottles.isEmpty, activity.isEmpty else {
+            alert = AlertInfo(title: "Something is running", message: "Stop every bottle (and wait for installs to finish) before removing data.")
+            return
+        }
+        isRemovingData = true
+        let paths = self.paths
+        Task {
+            defer { isRemovingData = false }
+            do {
+                _ = try await Task.detached { try TetherData.remove(categories, paths: paths) }.value
+            } catch {
+                fail("Couldn't remove Tether data", error)
+            }
+            if categories.contains(.settings) { settings = AppSettings() }
+            if categories.contains(.cache) { artwork = [:] }
+            if categories.contains(.bottles) { selection = nil; steamApps = [:]; notices = [:] }
+            reload()
             refreshSystem()
         }
     }

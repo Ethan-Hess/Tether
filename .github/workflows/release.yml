@@ -1,0 +1,141 @@
+name: Release
+
+# Push a tag like v0.2.0 (it must match the VERSION file) to build a release.
+# The result is a DRAFT: nothing reaches users, and the update feed doesn't change, until you
+# publish it. Run this workflow by hand for a dry run: it builds and verifies everything and
+# leaves the DMG as an artifact, but touches no secrets and creates no release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: macos-26
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      id-token: write      # for the provenance attestation
+      attestations: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the build number is the commit count
+
+      - name: Check the version
+        id: version
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::VERSION ('$VERSION') must look like 1.2.3"; exit 1
+          fi
+          if [[ "$GITHUB_REF_TYPE" == "tag" && "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+            echo "::error::tag $GITHUB_REF_NAME doesn't match VERSION v$VERSION"; exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Toolchain
+        id: tc
+        run: echo "xcode=$(xcodebuild -version | tr -s ' \n' '--')" >> "$GITHUB_OUTPUT"
+
+      # Only SwiftPM's build folder is cached. The runtime is always downloaded and checked
+      # against its pinned SHA-256: a release must not depend on a cache.
+      - uses: actions/cache@v6
+        with:
+          path: .build
+          key: spm-release-${{ steps.tc.outputs.xcode }}-${{ hashFiles('Package.swift', 'Package.resolved') }}
+          restore-keys: spm-release-${{ steps.tc.outputs.xcode }}-
+
+      - name: Tests
+        timeout-minutes: 10
+        run: ./scripts/test.sh
+
+      - name: Build Tether.app with the runtime embedded
+        run: ./scripts/package-app.sh
+
+      - name: Verify the app
+        run: ./scripts/verify-app.sh build/Tether.app
+
+      - name: Make the DMG
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p build/release
+          ./scripts/make-dmg.sh build/Tether.app "build/release/Tether-$VERSION.dmg"
+
+      - name: Attest build provenance
+        if: github.ref_type == 'tag'
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: build/release/Tether-${{ steps.version.outputs.version }}.dmg
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dmg
+          path: build/release/Tether-${{ steps.version.outputs.version }}.dmg
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    name: publish (draft release)
+    needs: build
+    if: github.ref_type == 'tag'
+    runs-on: macos-26
+    timeout-minutes: 30
+    # The only job that can see the update-signing key, and it waits for your approval.
+    environment: release
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: dmg
+          path: build/release
+
+      # Earlier DMGs and the current appcast let Sparkle make small deltas and keep old entries.
+      - name: Fetch the previous release, if any
+        run: |
+          PREV="$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName // empty')"
+          if [[ -n "$PREV" && "$PREV" != "$GITHUB_REF_NAME" ]]; then
+            echo "previous release: $PREV"
+            gh release download "$PREV" --dir build/release --pattern 'Tether-*.dmg' --pattern 'appcast.xml' --skip-existing
+          else
+            echo "no previous release"
+          fi
+
+      - name: Fetch Sparkle's tools
+        run: swift package resolve
+
+      - name: Write the signed appcast
+        env:
+          SPARKLE_ED_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: ./scripts/make-appcast.sh build/release "$VERSION"
+
+      - name: Create the draft release
+        run: |
+          shopt -s nullglob
+          assets=("build/release/Tether-$VERSION.dmg" build/release/appcast.xml build/release/*.delta)
+          notes=(--generate-notes)
+          [[ -f RELEASE_NOTES.md ]] && notes=(--notes-file RELEASE_NOTES.md)
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            # A re-run: replace the assets of the existing draft.
+            gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" --draft --verify-tag --title "Tether $VERSION" "${notes[@]}" "${assets[@]}"
+          fi
+          echo "Draft ready: review it, then publish." >> "$GITHUB_STEP_SUMMARY"

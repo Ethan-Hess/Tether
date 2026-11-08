@@ -31,10 +31,13 @@ public struct RuntimeManifest: Codable, Hashable, Sendable {
 public struct WineRuntime: Hashable, Sendable {
     public let root: URL
     public let manifest: RuntimeManifest
+    /// True for a runtime shipped inside Tether.app (read-only, sealed by the app's signature).
+    public let isEmbedded: Bool
 
-    public init(root: URL, manifest: RuntimeManifest) {
+    public init(root: URL, manifest: RuntimeManifest, isEmbedded: Bool = false) {
         self.root = root
         self.manifest = manifest
+        self.isEmbedded = isEmbedded
     }
 
     public var version: String { manifest.version }
@@ -51,7 +54,7 @@ public struct WineRuntime: Hashable, Sendable {
     public func supports(feature: String) -> Bool { manifest.features.contains(feature) }
 }
 
-public enum RuntimeStoreError: Error, LocalizedError {
+public enum RuntimeStoreError: Error, LocalizedError, Equatable {
     case noRuntimesInstalled
     case notFound(String)
 
@@ -65,27 +68,43 @@ public enum RuntimeStoreError: Error, LocalizedError {
 
 public struct RuntimeStore: Sendable {
     public let paths: TetherPaths
+    /// Runtimes shipped inside the app, one folder per version. Nil outside an `.app`.
+    public let embeddedRoot: URL?
 
-    public init(paths: TetherPaths = .default) {
-        self.paths = paths
+    /// `Tether.app/Contents/Resources/EmbeddedRuntimes`, or nil when not running from an app.
+    public static var defaultEmbeddedRoot: URL? {
+        TetherResources.mainResources?.appendingPathComponent("EmbeddedRuntimes", isDirectory: true)
     }
 
+    public init(paths: TetherPaths = .default, embeddedRoot: URL? = RuntimeStore.defaultEmbeddedRoot) {
+        self.paths = paths
+        self.embeddedRoot = embeddedRoot
+    }
+
+    /// Embedded and installed runtimes, oldest first. If a version is both embedded and installed,
+    /// the embedded copy is used: it is sealed by the app's signature.
     public func list() -> [WineRuntime] {
-        let fm = FileManager.default
-        guard let entries = try? fm.contentsOfDirectory(at: paths.runtimes, includingPropertiesForKeys: nil) else {
+        var byVersion: [String: WineRuntime] = [:]
+        for runtime in Self.scan(paths.runtimes, embedded: false) { byVersion[runtime.version] = runtime }
+        if let embeddedRoot {
+            for runtime in Self.scan(embeddedRoot, embedded: true) { byVersion[runtime.version] = runtime }
+        }
+        return byVersion.values.sorted { $0.version.compare($1.version, options: .numeric) == .orderedAscending }
+    }
+
+    static func scan(_ directory: URL, embedded: Bool) -> [WineRuntime] {
+        guard let entries = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) else {
             return []
         }
         return entries.compactMap { dir in
-            let manifestURL = dir.appendingPathComponent("runtime.json")
-            guard let data = try? Data(contentsOf: manifestURL),
+            guard let data = try? Data(contentsOf: dir.appendingPathComponent("runtime.json")),
                   let manifest = try? JSONDecoder().decode(RuntimeManifest.self, from: data)
             else { return nil }
-            return WineRuntime(root: dir, manifest: manifest)
+            return WineRuntime(root: dir, manifest: manifest, isEmbedded: embedded)
         }
-        .sorted { $0.version.compare($1.version, options: .numeric) == .orderedAscending }
     }
 
-    /// Resolves the runtime for a bottle: its pinned version, or the newest installed.
+    /// Resolves the runtime for a bottle: its pinned version, or the newest available.
     public func resolve(version: String?) throws -> WineRuntime {
         let all = list()
         if let version {

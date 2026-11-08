@@ -41,7 +41,7 @@ Tether is 1.0 when **all** of these are true:
 - [ ] **DXVK build** (`build-dxvk.sh`): pin a DXVK version whose Vulkan feature requirements MoltenVK satisfies, and document the choice in an ADR.
 - [ ] **MoltenVK** (`fetch-moltenvk.sh`): pinned release with a checksum.
 - [ ] **Packaging** (`package-runtime.sh`): `runtime.json`, ad-hoc signing, a `.tar.xz` with SHA-256.
-- [ ] **CI** *(deferred: builds and checks run locally for now)*: GitHub Actions on Apple Silicon macOS runners builds the runtime on tag. Release artifacts include checksums and a minisign signature.
+- [ ] **CI for the runtime build** *(deferred: the runtime is currently Mach9's pinned build, not built here)*: GitHub Actions on Apple Silicon macOS runners builds the runtime on tag. (App CI, release builds and the Homebrew tap now exist: `.github/workflows/`, [docs/RELEASING.md](docs/RELEASING.md).) Release artifacts include checksums and a minisign signature.
 - [x] `tether runtime install [version]`: download, verify the pinned hash, unpack into `Runtimes/`. Catalog: `0.1.0` is Mach9 `arm64-11.19-1` (no compat rules, loader not notarized); `0.2.0` is `arm64-11.20-5` (compat rules, notarized loader) and is the default. For development and rollback testing; 1.0 embeds the runtime in the app (M6). The installed runtime must not be quarantined (`tether doctor` checks).
 - [ ] **Smoke test set:** `notepad`, `winecfg`, and a redistributable D3D11 sample (built from Microsoft's open-source DirectX samples), run headless in CI where Metal is available.
 
@@ -128,17 +128,17 @@ Steam checklist: `scripts/steam-checklist.sh --app <id> --game-process <regex>` 
 
 ## M6: Distribution and trust
 
-- [ ] **Embed the pinned runtime in Tether.app** (notarized only if a paid Developer ID is later obtained; until then ad-hoc signed. A stand-in app test showed one Open Anyway approval covers the nested runtime; still to test: a real browser download and a full game launch from the translocated app, see the distribution spike) ([ADR 0005](docs/adr/0005-arm64-wine-with-fex.md), [distribution spike](docs/spikes/distribution.md)). Leave `lib/wine/aarch64-unix/wine.app` untouched (re-signing it loses its provisioning profile); sign the app's other Mach-O files with the hardened runtime. Verify that notarization accepts the nested loader with a real signing identity.
-- [ ] **Developer ID signing and notarization** *(deferred: needs a paid Apple Developer Program membership; decided to ship with the Gatekeeper warning for now)* for the app and any binaries Tether adds. Use the hardened runtime with only the entitlements needed, documented in an ADR.
-- [ ] **Licence notices:** a first inventory is in [docs/THIRD-PARTY.md](docs/THIRD-PARTY.md) (several rows still unverified); add a notices screen and source links.
-- [ ] **App updates** via Sparkle 2 (EdDSA-signed appcast). Runtime updates ship with app updates (the embedded runtime is pinned by version and hash); a separate runtime download channel is not planned.
-- [ ] **Rollback:** keep the previous runtime and let bottles pin a version.
-- [ ] **Bottle schema migrations** (`schemaVersion` exists; add migrators and tests).
-- [ ] **Homebrew cask.**
+- [x] **Embed the pinned runtime in Tether.app** (`scripts/package-app.sh`, ad-hoc signed; `verify-app.sh` confirms `wine.app` is untouched and the app resolves its embedded runtime; DMG is about 190 MB). Still to test: a game launched from a quarantined, browser-downloaded copy ([ADR 0006](docs/adr/0006-distribution-and-updates.md), [distribution spike](docs/spikes/distribution.md)).
+- [ ] **Developer ID signing and notarization** *(deferred: needs a Developer ID Application certificate; the scripts are wired with `SIGN_IDENTITY` and `NOTARY_PROFILE` but have never been run)*
+- [x] **Licence notices:** an in-app Notices screen and `Contents/Resources/Notices`, from one catalog ([docs/THIRD-PARTY.md](docs/THIRD-PARTY.md)). 5 rows (GMP, libidn2, libintl, libtasn1, libunistring) still rest on package metadata and are marked unverified.
+- [x] **App updates** via Sparkle 2 (EdDSA-signed appcast on the latest GitHub release, binary deltas; `scripts/release.sh`, [docs/RELEASING.md](docs/RELEASING.md)). Appcast signatures are verified; installing an update through the dialogs is still to be tested. A separate runtime channel is not planned.
+- [x] **Rollback:** a bottle can pin a runtime version and Settings installs older catalog versions. (The embedded runtime itself changes only with the app.)
+- [x] **Bottle schema migrations:** `BottleMigrator` with backups and a refusal for newer files (no migrations yet: format 1 is the only one). Unreadable bottles are listed, not hidden.
+- [x] **Homebrew tap** (this repository is the tap: `brew tap ethan-hess/tether https://github.com/Ethan-Hess/Tether`; set up, and goes live with the first published release, after which it updates automatically; see [docs/RELEASING.md](docs/RELEASING.md)). The official `homebrew-cask` requires a notarized app, so that waits for a Developer ID certificate.
 - [ ] **Reproducible builds:** pinned toolchains and documented build hashes.
 - [ ] **License compliance:** an SBOM per runtime release, LGPL source links for Wine and its patches, and a third-party notices screen in the app.
 - [ ] **Security review** of the launch-policy boundary and the update pipeline.
-- [ ] **Uninstall:** a documented, clean removal of all Tether data.
+- [x] **Uninstall:** Settings → Remove Tether Data, and [docs/UNINSTALL.md](docs/UNINSTALL.md).
 
 ## M7: 1.0
 

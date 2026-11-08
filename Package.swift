@@ -11,11 +11,12 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.3.0"),
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.6.0"),
     ],
     targets: [
         .target(
             name: "TetherKit",
-            resources: [.copy("Resources/Profiles"), .copy("Resources/Runtimes")]
+            resources: [.copy("Resources/Profiles"), .copy("Resources/Runtimes"), .copy("Resources/Notices")]
         ),
         .executableTarget(
             name: "tether",
@@ -24,7 +25,10 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ]
         ),
-        .executableTarget(name: "TetherApp", dependencies: ["TetherKit"]),
+        .executableTarget(
+            name: "TetherApp",
+            dependencies: ["TetherKit", .product(name: "Sparkle", package: "Sparkle")]
+        ),
         .testTarget(name: "TetherKitTests", dependencies: ["TetherKit"]),
     ]
 )

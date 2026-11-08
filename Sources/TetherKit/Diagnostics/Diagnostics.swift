@@ -36,7 +36,7 @@ public struct SystemCheck: Sendable {
         self.items = items
     }
 
-    public static func run(paths: TetherPaths = .default) -> SystemCheck {
+    public static func run(paths: TetherPaths = .default, embeddedRoot: URL? = RuntimeStore.defaultEmbeddedRoot) -> SystemCheck {
         let fm = FileManager.default
         var items: [Item] = []
 
@@ -57,7 +57,7 @@ public struct SystemCheck: Sendable {
             detail: canRunGames ? "ok" : "the app works, but the Wine runtime needs macOS 26.4 or newer"
         ))
 
-        let runtimes = RuntimeStore(paths: paths).list()
+        let runtimes = RuntimeStore(paths: paths, embeddedRoot: embeddedRoot).list()
         items.append(Item(
             name: "Wine runtime",
             ok: !runtimes.isEmpty,
@@ -67,7 +67,7 @@ public struct SystemCheck: Sendable {
         // A quarantined runtime is blocked by Gatekeeper when its loader is signed but not
         // notarized (arm64-11.19-1). A runtime with the `notarized-loader` feature (11.20-5 and
         // newer) runs even when quarantined, so it is not flagged (docs/spikes/distribution.md).
-        let quarantined = runtimes.filter { Quarantine.isQuarantined($0) && !$0.supports(feature: "notarized-loader") }
+        let quarantined = runtimes.filter { !$0.isEmbedded && Quarantine.isQuarantined($0) && !$0.supports(feature: "notarized-loader") }
         if !runtimes.isEmpty {
             items.append(Item(
                 name: "Runtime not quarantined",
@@ -96,11 +96,13 @@ public enum DiagnosticsReport {
         runtime: WineRuntime?,
         system: SystemCheck,
         sessions: [LaunchLog.Session],
+        appVersion: String? = nil,
         home: String = NSHomeDirectory(),
         tailLines: Int = 200
     ) -> String {
         let v = ProcessInfo.processInfo.operatingSystemVersion
         var out: [String] = ["# Tether diagnostics", ""]
+        if let appVersion { out.append("- Tether: \(appVersion)") }
         out.append("- macOS: \(v.majorVersion).\(v.minorVersion).\(v.patchVersion)")
         #if arch(arm64)
         out.append("- Architecture: arm64")
@@ -108,7 +110,7 @@ public enum DiagnosticsReport {
         out.append("- Architecture: x86_64")
         #endif
         if let runtime {
-            out.append("- Runtime: \(runtime.version) (Wine \(runtime.manifest.wineVersion), features: \(runtime.manifest.features.joined(separator: ", ")))")
+            out.append("- Runtime: \(runtime.version)\(runtime.isEmbedded ? " (built in)" : "") (Wine \(runtime.manifest.wineVersion), features: \(runtime.manifest.features.joined(separator: ", ")))")
         } else {
             out.append("- Runtime: none installed")
         }
