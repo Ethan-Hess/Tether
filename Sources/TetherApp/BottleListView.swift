@@ -33,15 +33,19 @@ struct BottleListView: View {
                 }
             }
             .navigationTitle("Bottles")
-            .toolbar {
-                Button { showingCreate = true } label: { Label("New Bottle", systemImage: "plus") }
-            }
+            .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 380)
         } detail: {
             if let bottle = model.bottle(model.selection) {
                 BottleDetailView(bottle: bottle)
                     .id(bottle.id)
             } else {
                 ContentUnavailableView("Select a Bottle", systemImage: "sidebar.left")
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button { showingCreate = true } label: { Label("New Bottle", systemImage: "plus") }
+                    .help("Create a new bottle")
             }
         }
         .sheet(isPresented: $showingCreate) { CreateBottleSheet() }
@@ -63,6 +67,7 @@ struct CreateBottleSheet: View {
     @State private var profileID: String?
     @State private var backend: GraphicsBackendID?
     @State private var windows: WindowsVersion = .win10
+    @State private var loadedDefaults = false
 
     private var problem: String? { NameCheck.problem(name, store: model.store) }
 
@@ -93,7 +98,10 @@ struct CreateBottleSheet: View {
                 Spacer()
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
                 Button("Create") {
-                    model.create(name: name, config: BottleConfig(backend: backend, profileID: profileID, windowsVersion: windows))
+                    var config = model.settings.newBottleConfig(profileID: profileID)
+                    config.backend = backend
+                    config.windowsVersion = windows
+                    model.create(name: name, config: config)
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
@@ -102,6 +110,12 @@ struct CreateBottleSheet: View {
         }
         .padding()
         .frame(width: 420)
+        .onAppear {
+            guard !loadedDefaults else { return }
+            loadedDefaults = true
+            backend = model.settings.defaultBackend
+            windows = model.settings.defaultWindowsVersion
+        }
     }
 }
 

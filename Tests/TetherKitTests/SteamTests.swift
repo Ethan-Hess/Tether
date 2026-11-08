@@ -80,6 +80,24 @@ import Testing
         """
     }
 
+    @Test func parsesLastPlayedWhenSteamRecordedIt() throws {
+        let root = URL(fileURLWithPath: "/lib")
+        let never = try SteamLibrary.parseAppManifest(Self.manifest(id: 1, name: "A", dir: "A"), libraryRoot: root)
+        #expect(never.lastPlayed == nil)
+        let played = Self.manifest(id: 2, name: "B", dir: "B").replacingOccurrences(of: "\"buildid\" \"42\"", with: "\"LastPlayed\" \"1700000999\"")
+        #expect(try SteamLibrary.parseAppManifest(played, libraryRoot: root).lastPlayed == Date(timeIntervalSince1970: 1_700_000_999))
+        let zero = Self.manifest(id: 3, name: "C", dir: "C").replacingOccurrences(of: "\"buildid\" \"42\"", with: "\"LastPlayed\" \"0\"")
+        #expect(try SteamLibrary.parseAppManifest(zero, libraryRoot: root).lastPlayed == nil)
+    }
+
+    @Test func steamSupportSoftwareIsFlaggedAsATool() throws {
+        let root = URL(fileURLWithPath: "/lib")
+        let redist = try SteamLibrary.parseAppManifest(Self.manifest(id: 228980, name: "Steamworks Common Redistributables", dir: "Steamworks Shared"), libraryRoot: root)
+        let game = try SteamLibrary.parseAppManifest(Self.manifest(id: 3480990, name: "There Are No Orcs", dir: "There Are No Orcs"), libraryRoot: root)
+        #expect(redist.isTool)
+        #expect(!game.isTool)
+    }
+
     @Test func libraryFoldersCurrentAndLegacyFormats() throws {
         #expect(try SteamLibrary.libraryFolders(vdf: Self.newFormat) == ["C:\\Program Files (x86)\\Steam", "D:\\SteamLibrary"])
         let legacy = "\"LibraryFolders\" { \"TimeNextStatsReport\" \"1\" \"ContentStatsID\" \"7\" \"1\" \"E:\\\\Games\" }"

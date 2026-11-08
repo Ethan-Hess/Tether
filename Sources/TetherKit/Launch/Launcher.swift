@@ -134,6 +134,11 @@ public struct Launcher: Sendable {
     ///   before the process starts, so a process that exits immediately is still reported.
     @discardableResult
     public func launch(_ plan: LaunchPlan, onExit: (@Sendable (Int32) -> Void)? = nil) throws -> Process {
+        // Whatever gets logged below (debug output, first-run setup) starts under a marker, so the
+        // log viewer can show one launch at a time.
+        if plan.environment.variables["WINEDEBUG"] != "-all" || !isPrefixInitialized(plan.bottle) {
+            LaunchLog.appendMarker(to: plan.bottle, executable: plan.arguments.first ?? "?")
+        }
         // First, so even the first-run prefix setup finds the file the environment points at.
         try writeCompatRules(plan)
         if !isPrefixInitialized(plan.bottle) {

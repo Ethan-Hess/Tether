@@ -31,6 +31,9 @@ public struct TetherPaths: Sendable, Hashable {
     /// User-authored game profiles; these override built-ins with the same id.
     public var profiles: URL { root.appendingPathComponent("Profiles", isDirectory: true) }
 
+    /// Re-creatable downloads such as Steam artwork. Safe to delete.
+    public var cache: URL { root.appendingPathComponent("Cache", isDirectory: true) }
+
     /// Global settings file.
     public var settings: URL { root.appendingPathComponent("settings.json") }
 }
