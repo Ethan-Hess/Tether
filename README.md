@@ -5,7 +5,7 @@
 Tether is an open-source alternative to CrossOver for macOS. It pairs a native Swift/SwiftUI app with a curated [Wine](https://www.winehq.org/) runtime and Metal-native DirectX translation, so you can run Windows games, and the Steam launcher, in isolated "bottles."
 
 > [!WARNING]
-> **Pre-alpha.** The app, CLI, bottle management, and launch pipeline are scaffolded and tested, but there is no prebuilt Wine runtime yet, so it can't run games out of the box. See [Roadmap](#roadmap).
+> **Pre-alpha.** The app, CLI, and Steam flow work in manual tests, and `scripts/package-app.sh` builds a `Tether.app` with the Wine runtime embedded, but there is no published release yet and builds are ad-hoc signed (one "Open Anyway"). See [Roadmap](#roadmap).
 
 ## Goals
 
@@ -67,6 +67,17 @@ swift run tether bottle set steam --arg=-silent                       # extra la
 swift run tether env steam 'C:\Program Files (x86)\Steam\Steam.exe'   # inspect the exact launch env
 ```
 
+Install with Homebrew once a release is published:
+
+```sh
+brew tap ethan-hess/tether
+brew install --cask tether
+```
+
+or download the DMG from the [Releases](https://github.com/Ethan-Hess/Tether/releases) page. Either way macOS asks you to approve the app once ("Open Anyway" in System Settings, Privacy & Security), because it isn't notarized yet. Tether updates itself afterwards.
+
+Build the app (a real `Tether.app` with the runtime inside, and a DMG) with [scripts/package-app.sh](docs/BUILDING.md#tetherapp-and-the-dmg); remove Tether with [docs/UNINSTALL.md](docs/UNINSTALL.md).
+
 Set `TETHER_HOME=/some/dir` to keep bottles and runtimes somewhere other than `~/Library/Application Support/Tether`.
 
 ## Game profiles
@@ -106,7 +117,7 @@ The full plan, with 1.0 exit criteria and risks, is in **[ROADMAP.md](ROADMAP.md
 - [ ] **M3 Graphics coverage:** D3D9 through D3D12, Vulkan, OpenGL
 - [ ] **M4 Performance:** `tether bench`, msync, shader caches, input latency
 - [ ] **M5 Product UX:** library, one-click launcher setup, shortcuts
-- [ ] **M6 Distribution:** signing, notarization, auto-updates
+- [ ] **M6 Distribution:** app bundle, embedded runtime, DMG, Sparkle updates, rollback, notices and uninstall are built; notarization is waiting on a Developer ID certificate
 - [ ] **M7 1.0:** compatibility database, 50+ Gold titles
 
 ## Contributing

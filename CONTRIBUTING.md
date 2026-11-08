@@ -31,6 +31,17 @@ Use `TETHER_HOME=$(mktemp -d)` when experimenting so you don't touch your real b
 3. Add a JSON profile containing only what's needed. Use `notes` for known issues and tested runtime versions.
 4. Update the status table in the README.
 
+## Continuous integration
+
+Every pull request runs `.github/workflows/ci.yml`: the test suite on macOS 15 and 26, a release build of every product, a `Tether.app` build checked by `scripts/verify-app.sh`, and linting of the shell scripts, JSON files and workflows. Run the same things locally before pushing:
+
+```sh
+./scripts/test.sh
+./scripts/package-app.sh --no-runtime && ./scripts/verify-app.sh build/Tether.app
+```
+
+Releases are built by `.github/workflows/release.yml` (see [docs/RELEASING.md](docs/RELEASING.md)); you don't need to touch it to contribute.
+
 ## Pull requests
 
 - Add or update tests in `Tests/TetherKitTests` for any TetherKit change.

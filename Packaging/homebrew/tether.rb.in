@@ -1,0 +1,36 @@
+cask "tether" do
+  version "@VERSION@"
+  sha256 "@SHA256@"
+
+  url "https://github.com/Ethan-Hess/Tether/releases/download/v#{version}/Tether-#{version}.dmg"
+  name "Tether"
+  desc "Run Windows games on Apple Silicon Macs"
+  homepage "https://github.com/Ethan-Hess/Tether"
+
+  livecheck do
+    url :url
+    strategy :github_latest
+  end
+
+  # Tether updates itself with Sparkle, so `brew upgrade` leaves it alone.
+  auto_updates true
+  depends_on arch: :arm64
+  depends_on macos: ">= :tahoe"
+
+  app "Tether.app"
+
+  # `brew uninstall --zap` deletes everything below, including your bottles (installed games and saves).
+  zap trash: [
+    "~/Library/Application Support/Tether",
+    "~/Library/Caches/dev.tether.Tether",
+    "~/Library/Preferences/dev.tether.Tether.plist",
+    "~/Library/Saved Application State/dev.tether.Tether.savedState",
+  ]
+
+  caveats <<~EOS
+    Tether is not notarized yet, so macOS blocks the first launch. Open System Settings,
+    Privacy & Security, and choose "Open Anyway" once.
+
+    Playing games needs macOS 26.4 or newer.
+  EOS
+end

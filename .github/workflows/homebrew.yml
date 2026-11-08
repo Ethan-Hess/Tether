@@ -1,0 +1,67 @@
+name: Update Homebrew tap
+
+# When a release is published, render the cask for it and commit it to the tap repository.
+# (Publishing by hand triggers this; a release made with the workflow's own token would not.)
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to put in the tap (for example v0.1.0)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  cask:
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check the tag
+        run: |
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::'$TAG' must look like v1.2.3"; exit 1
+          fi
+          echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+
+      # The cask template is read from the release's own commit.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Hash the released DMG
+        run: |
+          gh release download "$TAG" --pattern "Tether-$VERSION.dmg" --dir dl
+          echo "SHA256=$(shasum -a 256 "dl/Tether-$VERSION.dmg" | cut -d' ' -f1)" >> "$GITHUB_ENV"
+
+      - name: Render the cask
+        run: |
+          ./scripts/render-cask.sh "$VERSION" "$SHA256" > tether.rb
+          ruby -c tether.rb
+          cat tether.rb
+
+      - uses: actions/checkout@v7
+        with:
+          repository: Ethan-Hess/homebrew-tether
+          token: ${{ secrets.TAP_TOKEN }}
+          path: tap
+
+      - name: Commit to the tap
+        working-directory: tap
+        run: |
+          mkdir -p Casks
+          cp ../tether.rb Casks/tether.rb
+          if git diff --quiet -- Casks/tether.rb && git ls-files --error-unmatch Casks/tether.rb > /dev/null 2>&1; then
+            echo "The tap already has this version."; exit 0
+          fi
+          git config user.name "tether-release"
+          git config user.email "tether-release@users.noreply.github.com"
+          git add Casks/tether.rb
+          git commit -m "tether $VERSION"
+          git push

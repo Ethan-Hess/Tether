@@ -14,7 +14,27 @@ swift run TetherApp
 
 `scripts/test.sh` exists because with only the Command Line Tools installed (no Xcode), SwiftPM doesn't add the CLT `Testing.framework` search path. With Xcode, plain `swift test` works.
 
-Packaging a signed and notarized `Tether.app` is on the roadmap. It will be an Xcode or `xcodebuild` wrapper around the same SwiftPM targets.
+## Tether.app and the DMG
+
+`swift run TetherApp` is for development. To build the real app (no Xcode needed, scripts only):
+
+```sh
+scripts/package-app.sh              # build/Tether.app with the pinned runtime embedded (~1 GB)
+scripts/package-app.sh --no-runtime # same, without the runtime: quick, for UI and update testing
+scripts/verify-app.sh               # structure, signatures, wine.app untouched, and a --self-check run
+scripts/make-dmg.sh                 # build/Tether-<version>.dmg (LZMA compressed)
+```
+
+What the app script does, and why:
+
+- It builds the release binaries, then lays out `Contents/{MacOS,Resources,Frameworks}`. SwiftPM's own resource bundle can't sit at an app's root (it breaks signing and points at the build folder), so its contents go into `Contents/Resources`, where `TetherResources` looks first.
+- The runtime is installed with the normal `tether runtime install` path (download, pinned SHA-256, safe unpack) into `build/cache`, then copied to `Contents/Resources/EmbeddedRuntimes/<version>`. It is reused on later builds.
+- It signs ad-hoc by default. The outer app is signed **without `--deep`** and `wine.app` is never re-signed: it carries its own provisioning profile and the cross-architecture entitlement ([distribution spike](spikes/distribution.md)).
+- `SIGN_IDENTITY="Developer ID Application: …"` signs with a real identity and the hardened runtime, and signs the runtime's other Mach-O files too (not `wine.app`), as notarization needs. That path is wired but has not been run: no Developer ID certificate exists yet.
+- `Tether --self-check` (used by `verify-app.sh`) prints where the app found its resources and runtime, so a copy that quietly falls back to a build folder is caught.
+- The version comes from the `VERSION` file; the build number is the commit count.
+
+CI runs the same scripts on GitHub's runners (`.github/workflows/ci.yml`: tests on macOS 15 and 26, a `--no-runtime` bundle build checked by `verify-app.sh`, lint). Releasing (tag, draft, publish, Homebrew) is in [RELEASING.md](RELEASING.md); removing Tether is in [UNINSTALL.md](UNINSTALL.md).
 
 ## Runtime (Wine + backends)
 
