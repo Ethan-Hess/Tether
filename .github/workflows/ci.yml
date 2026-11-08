@@ -92,10 +92,14 @@ jobs:
     timeout-minutes: 30
     env:
       HOMEBREW_NO_AUTO_UPDATE: "1"
-      HOMEBREW_NO_INSTALL_FROM_API: "1"
       HOMEBREW_GITHUB_API_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
+
+      # `brew style` shells out to shellcheck, so have it before developer mode (turned on by the
+      # developer commands below) changes how Homebrew finds formulae.
+      - name: Install shellcheck
+        run: brew install shellcheck
 
       # The template is checked on every run, before any release has produced a real cask.
       - name: Check the cask template
@@ -150,5 +154,5 @@ jobs:
 
       - name: Workflows
         run: |
-          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
           "$(go env GOPATH)/bin/actionlint"
