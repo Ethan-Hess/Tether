@@ -110,6 +110,8 @@ jobs:
           mkdir -p "$(brew --repository ci/tether-check)/Casks"
           cp "$RUNNER_TEMP/tether.rb" "$(brew --repository ci/tether-check)/Casks/tether.rb"
           brew style ci/tether-check
+          # Homebrew 6+ refuses to load a cask from an untrusted tap, even for an audit.
+          brew trust --cask ci/tether-check/tether
           brew audit --cask --strict ci/tether-check/tether
 
       # This repository is the tap: once a release has committed Casks/tether.rb, check it for real.
@@ -118,13 +120,16 @@ jobs:
         run: |
           brew tap ethan-hess/tether "$GITHUB_WORKSPACE"
           brew style ethan-hess/tether
+          brew trust --cask ethan-hess/tether/tether
           brew audit --cask --online --strict ethan-hess/tether/tether
 
-      # Heavier: downloads the DMG (~200 MB) and installs it. macOS quarantines the app, so this only
-      # checks that it installs, is signed consistently, and removes cleanly.
+      # Heavier: downloads the DMG (~200 MB) and installs it the way the README tells users to (the
+      # fully qualified name, which Homebrew 6+ takes as trusting that one cask). macOS quarantines
+      # the app, so this only checks that it installs, is signed consistently, and removes cleanly.
       - name: Install smoke test
         if: hashFiles('Casks/tether.rb') != '' && github.event_name == 'workflow_dispatch' && inputs.install_cask
         run: |
+          brew tap ethan-hess/tether "$GITHUB_WORKSPACE"
           brew install --cask ethan-hess/tether/tether
           test -d /Applications/Tether.app
           codesign --verify --strict /Applications/Tether.app

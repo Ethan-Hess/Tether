@@ -71,8 +71,10 @@ Install with Homebrew once a release is published:
 
 ```sh
 brew tap ethan-hess/tether https://github.com/Ethan-Hess/Tether
-brew install --cask tether
+brew install --cask ethan-hess/tether/tether
 ```
+
+(Homebrew 6 and later only load casks from taps you have trusted. Installing by the full name trusts just this one cask; if Homebrew still refuses, run `brew trust --cask ethan-hess/tether/tether` first.)
 
 or download the DMG from the [Releases](https://github.com/Ethan-Hess/Tether/releases) page. Either way macOS asks you to approve the app once ("Open Anyway" in System Settings, Privacy & Security), because it isn't notarized yet. Tether updates itself afterwards.
 
