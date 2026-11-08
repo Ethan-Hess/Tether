@@ -57,6 +57,7 @@ jobs:
           restore-keys: spm-release-${{ steps.tc.outputs.xcode }}-
 
       - name: Tests
+        timeout-minutes: 10
         run: ./scripts/test.sh
 
       - name: Build Tether.app with the runtime embedded

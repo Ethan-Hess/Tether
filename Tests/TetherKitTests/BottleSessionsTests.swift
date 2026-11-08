@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TetherKit
 
-@Suite struct BottleSessionsTests {
+@Suite(.timeLimit(.minutes(1))) struct BottleSessionsTests {
     let home = TempHome()
 
     /// A runtime whose `wine` is a shell script that runs `body`, and a bottle whose prefix is

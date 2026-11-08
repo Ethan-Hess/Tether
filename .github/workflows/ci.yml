@@ -45,7 +45,10 @@ jobs:
           key: spm-${{ matrix.os }}-${{ steps.tc.outputs.xcode }}-${{ hashFiles('Package.swift', 'Package.resolved') }}
           restore-keys: spm-${{ matrix.os }}-${{ steps.tc.outputs.xcode }}-
 
+      # The suite takes seconds. The step timeout turns any future hang into a quick failure, and
+      # the slow suites carry their own time limits so the log names the stuck test.
       - name: Tests
+        timeout-minutes: 10
         run: ./scripts/test.sh
 
       - name: Release build of every product

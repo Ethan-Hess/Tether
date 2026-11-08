@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TetherKit
 
-@Suite struct SteamArtworkTests {
+@Suite(.timeLimit(.minutes(1))) struct SteamArtworkTests {
     let home = TempHome()
 
     private func artwork(_ download: @escaping RuntimeDownloader) -> SteamArtwork {

@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import TetherKit
 
-@Suite struct WatchersTests {
+@Suite(.timeLimit(.minutes(1))) struct WatchersTests {
     let home = TempHome()
 
     private func file(_ name: String = "log.txt") throws -> URL {
@@ -79,8 +79,28 @@ import Testing
         let watcher = ProcessExitWatcher(pid: p.processIdentifier) { count.increment() }
         defer { watcher.cancel() }
         #expect(await eventually { count.value >= 1 })
-        p.waitUntilExit()
-        #expect(!ProcessExitWatcher.isAlive(p.processIdentifier))
+        // Don't call `p.waitUntilExit()` here: it waits on the run loop of the thread that called
+        // `run()`, and after an `await` this test may be on another thread, which hangs forever.
+        #expect(await eventually { !p.isRunning })
+        #expect(await eventually { !ProcessExitWatcher.isAlive(p.processIdentifier) })
+    }
+
+    /// Watching a process that Foundation also watches (one we started ourselves) must not make
+    /// Foundation miss the exit: its terminationHandler and `waitUntilExit` rely on it.
+    @Test func watchingAChildDoesNotStealItsTerminationNotice() async throws {
+        for round in 0..<40 {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/bin/sleep")
+            p.arguments = ["0.05"]
+            let foundationSaw = Counter()
+            p.terminationHandler = { _ in foundationSaw.increment() }
+            try p.run()
+            let ours = Counter()
+            let watcher = ProcessExitWatcher(pid: p.processIdentifier) { ours.increment() }
+            defer { watcher.cancel() }
+            #expect(await eventually { foundationSaw.value >= 1 && ours.value >= 1 },
+                    "round \(round): foundation=\(foundationSaw.value) watcher=\(ours.value)")
+        }
     }
 
     @Test func wakeSignalCoalescesAndTimesOut() async {
