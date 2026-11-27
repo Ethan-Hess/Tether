@@ -40,6 +40,29 @@ The full design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - macOS 14 Sonoma or newer to build and run the app. Running games with the planned arm64 + FEX runtime needs macOS 26.4+ ([ADR 0005](docs/adr/0005-arm64-wine-with-fex.md)). Rosetta 2 is only needed for the earlier x86_64 runtime.
 - Xcode 16+ or the Swift 6 command line tools, to build
 
+## Install
+
+Installs work once a release is published.
+
+**Homebrew (recommended)**
+
+```sh
+brew tap ethan-hess/tether https://github.com/Ethan-Hess/Tether
+brew install --cask ethan-hess/tether/tether
+```
+
+Homebrew 6 and later only load casks from taps you have trusted. Installing by the full name trusts just this one cask; if Homebrew still refuses, run `brew trust --cask ethan-hess/tether/tether` first.
+
+**DMG**
+
+Download the DMG from the [Releases](https://github.com/Ethan-Hess/Tether/releases) page and drag Tether to Applications.
+
+**First launch.** Tether isn't notarized yet, so macOS asks you to approve it once, whichever way you installed: open System Settings → Privacy & Security and click "Open Anyway". If you'd rather use the terminal, `xattr -dr com.apple.quarantine /Applications/Tether.app` has the same effect.
+
+**Updates.** Tether updates itself (Tether menu → Check for Updates…). Updates installed this way don't ask for approval again. `brew upgrade --cask tether` also works once the release's cask pull request has been merged; pick one method and stick with it so the two don't disagree about the installed version.
+
+**Uninstall.** `brew uninstall --cask tether`, or see [docs/UNINSTALL.md](docs/UNINSTALL.md).
+
 ## Quick start (developers)
 
 ```sh
@@ -67,18 +90,7 @@ swift run tether bottle set steam --arg=-silent                       # extra la
 swift run tether env steam 'C:\Program Files (x86)\Steam\Steam.exe'   # inspect the exact launch env
 ```
 
-Install with Homebrew once a release is published:
-
-```sh
-brew tap ethan-hess/tether https://github.com/Ethan-Hess/Tether
-brew install --cask ethan-hess/tether/tether
-```
-
-(Homebrew 6 and later only load casks from taps you have trusted. Installing by the full name trusts just this one cask; if Homebrew still refuses, run `brew trust --cask ethan-hess/tether/tether` first.)
-
-or download the DMG from the [Releases](https://github.com/Ethan-Hess/Tether/releases) page. Either way macOS asks you to approve the app once ("Open Anyway" in System Settings, Privacy & Security), because it isn't notarized yet. Tether updates itself afterwards.
-
-Build the app (a real `Tether.app` with the runtime inside, and a DMG) with [scripts/package-app.sh](docs/BUILDING.md#tetherapp-and-the-dmg); remove Tether with [docs/UNINSTALL.md](docs/UNINSTALL.md).
+To install Tether as an app, see [Install](#install). Build the app (a real `Tether.app` with the runtime inside, and a DMG) with [scripts/package-app.sh](docs/BUILDING.md#tetherapp-and-the-dmg); remove Tether with [docs/UNINSTALL.md](docs/UNINSTALL.md).
 
 Set `TETHER_HOME=/some/dir` to keep bottles and runtimes somewhere other than `~/Library/Application Support/Tether`.
 
