@@ -122,7 +122,8 @@ jobs:
         if: hashFiles('Casks/tether.rb') != ''
         run: |
           brew tap ethan-hess/tether "$GITHUB_WORKSPACE"
-          brew style ethan-hess/tether
+          # Only the cask: naming the tap would also run shfmt over every script in this repository.
+          brew style --cask ethan-hess/tether/tether
           brew trust --cask ethan-hess/tether/tether
           brew audit --cask --online --strict ethan-hess/tether/tether
 

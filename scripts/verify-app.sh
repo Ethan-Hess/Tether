@@ -31,6 +31,10 @@ check "bundle id dev.tether.Tether" "[[ \$(pl CFBundleIdentifier) == dev.tether.
 check "version is $EXPECT_VERSION (or overridden)" "[[ -n \$(pl CFBundleShortVersionString) ]]"
 check "build number is numeric" "[[ \$(pl CFBundleVersion) =~ ^[0-9]+\$ ]]"
 check "minimum macOS 14" "[[ \$(pl LSMinimumSystemVersion) == 14.0 ]]"
+# Wine is launched by Tether, so TCC blames Tether (the responsible process) and kills wine with
+# SIGKILL if a game touches the mic or camera and Tether's own plist has no usage description.
+check "microphone usage description (games that open audio input)" "[[ -n \$(pl NSMicrophoneUsageDescription) ]]"
+check "camera usage description" "[[ -n \$(pl NSCameraUsageDescription) ]]"
 check "update feed is https" "[[ \$(pl SUFeedURL) == https://* ]]"
 if [[ -n "$(pl SUPublicEDKey)" ]]; then ok "update signing key present"; else warn "no SUPublicEDKey: this build cannot receive updates"; fi
 
