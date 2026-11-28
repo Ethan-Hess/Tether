@@ -17,6 +17,8 @@
     <key>NSHighResolutionCapable</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>
     <key>NSHumanReadableCopyright</key><string>Tether is free software (LGPL-2.1). See Notices in the app for third-party licences.</string>
+    <key>NSMicrophoneUsageDescription</key><string>A Windows game running in Tether wants to use the microphone (for voice chat or audio input).</string>
+    <key>NSCameraUsageDescription</key><string>A Windows game running in Tether wants to use the camera.</string>
     <key>SUFeedURL</key><string>@FEED_URL@</string>
 @SPARKLE_KEY@
 </dict>
